@@ -120,6 +120,20 @@ def native_dialog(kind):
         return None
     return None
 
+def inside_results(path):
+    """Only allow opening things inside the results folder."""
+    root = os.path.realpath(load_settings()["out_root"])
+    p = os.path.realpath(path)
+    return p == root or p.startswith(root + os.sep)
+
+def open_path(path):
+    if platform.system() == "Windows":
+        os.startfile(path)  # noqa
+    elif platform.system() == "Darwin":
+        subprocess.Popen(["open", path])
+    else:
+        subprocess.Popen(["xdg-open", path])
+
 def open_folder(path):
     if platform.system() == "Windows":
         os.startfile(path)  # noqa
@@ -216,8 +230,32 @@ def api_fill():
 @app.route("/api/open", methods=["POST"])
 def api_open():
     p = (request.json or {}).get("path", "")
-    if os.path.isdir(p):
+    if os.path.isdir(p) and inside_results(p):
         open_folder(p)
+        return jsonify(ok=True)
+    return jsonify(ok=False)
+
+@app.route("/api/history")
+def api_history():
+    root = load_settings()["out_root"]
+    items = []
+    if os.path.isdir(root):
+        for d in os.listdir(root):
+            p = os.path.join(root, d)
+            rep = os.path.join(p, "Fill report.html")
+            if os.path.isdir(p) and os.path.isfile(rep):
+                forms = [f for f in os.listdir(p) if f.lower().endswith((".xlsx", ".xlsm"))]
+                t = os.path.getmtime(rep)
+                items.append({"name": d, "path": p, "report": rep, "mtime": t, "forms": len(forms),
+                              "date": time.strftime("%d-%m-%Y %H:%M", time.localtime(t))})
+    items.sort(key=lambda x: -x["mtime"])
+    return jsonify(root=root, items=items)
+
+@app.route("/api/openreport", methods=["POST"])
+def api_openreport():
+    p = (request.json or {}).get("path", "")
+    if os.path.basename(p) == "Fill report.html" and os.path.isfile(p) and inside_results(p):
+        open_path(p)
         return jsonify(ok=True)
     return jsonify(ok=False)
 

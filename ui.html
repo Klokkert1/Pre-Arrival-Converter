@@ -76,7 +76,7 @@ button.pri:hover{opacity:.88}
     <div class="msg mut" id="target"></div>
     <div class="row" style="justify-content:space-between;margin-top:14px">
       <span class="msg err" id="fillmsg" style="margin:0"></span>
-      <button class="pri" id="fill">Fill forms</button>
+      <span style="display:flex;gap:10px"><button id="hist">Previous results</button><button class="pri" id="fill">Fill forms</button></span>
     </div>
   </div>
   <div class="quit"><span id="lic"></span> · <a id="quit">Quit PortFill</a></div>
@@ -170,6 +170,20 @@ function showResult(r){
   $("mopen").onclick=()=>api("/api/open",{json:{path:r.out_dir}});
   $("mok").onclick=()=>{$("ov").classList.remove("show");refresh()};
 }
+$("hist").onclick=async()=>{
+  const r=await (await fetch("/api/history")).json();
+  let h=`<h2>Previous results</h2><div class="mut">${esc(r.root)}</div>`;
+  if(!r.items.length)h+=`<p class="mut" style="margin:6px 0">No results yet. Filled forms will be listed here.</p>`;
+  for(const it of r.items){
+    h+=`<div class="file"><span class="nm" title="${esc(it.name)}"><b style="font-weight:500">${esc(it.name)}</b><br><span class="mut">${esc(it.date)} · ${it.forms} ${it.forms==1?"form":"forms"}</span></span>
+      <button class="hr" data-p="${esc(it.report)}">Open report</button><button class="hf" data-p="${esc(it.path)}">Open folder</button></div>`;
+  }
+  h+=`<div class="foot"><button class="pri" id="hclose">Close</button></div>`;
+  $("modal").innerHTML=h;$("ov").classList.add("show");
+  document.querySelectorAll(".hr").forEach(b=>b.onclick=()=>api("/api/openreport",{json:{path:b.dataset.p}}));
+  document.querySelectorAll(".hf").forEach(b=>b.onclick=()=>api("/api/open",{json:{path:b.dataset.p}}));
+  $("hclose").onclick=()=>$("ov").classList.remove("show");
+};
 $("fill").onclick=async()=>{
   $("fillmsg").textContent="";const b=$("fill");b.textContent="Filling…";
   const r=await api("/api/fill",{method:"POST"});b.textContent="Fill forms";
