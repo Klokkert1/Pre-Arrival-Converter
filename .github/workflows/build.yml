@@ -30,12 +30,12 @@ jobs:
       - name: Build (Mac)
         if: runner.os == 'macOS'
         run: |
-          pyinstaller --noconfirm --windowed --name PortFill --add-data "ui.html:." portfill_app.py
+          pyinstaller --noconfirm --windowed --name PortFill --collect-all webview --add-data "ui.html:." portfill_app.py
           ditto -c -k --keepParent dist/PortFill.app PortFill-${{ matrix.name }}.zip
       - name: Build (Windows)
         if: runner.os == 'Windows'
         run: |
-          pyinstaller --noconfirm --onefile --windowed --name PortFill --add-data "ui.html;." portfill_app.py
+          pyinstaller --noconfirm --onefile --windowed --name PortFill --collect-all webview --add-data "ui.html;." portfill_app.py
           Compress-Archive -Path dist/PortFill.exe -DestinationPath PortFill-${{ matrix.name }}.zip
       - uses: actions/upload-artifact@v4
         with:
