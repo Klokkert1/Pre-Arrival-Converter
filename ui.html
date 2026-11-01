@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PortFill</title>
+<style>
+:root{--bg:#f5f4ef;--card:#fff;--text:#1f1f1d;--sec:#5f5e5a;--mut:#8a8984;--bd:#dcdad2;--bds:#b9b6ab;--acc:#185fa5;--accbg:#e6f1fb;
+--ok:#3b6d11;--okbg:#eaf3de;--warn:#854f0b;--warnbg:#faeeda;--warnbd:#ef9f27;--err:#a32d2d;--errbg:#fcebeb;--btn:#1f1f1d;--btnt:#fff;--r:8px}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1b1a;--card:#262624;--text:#f1efe8;--sec:#b4b2a9;--mut:#888780;--bd:#3a3a37;--bds:#55544f;--acc:#85b7eb;--accbg:#0c447c;
+--ok:#c0dd97;--okbg:#27500a;--warn:#fac775;--warnbg:#412402;--warnbd:#854f0b;--err:#f7c1c1;--errbg:#501313;--btn:#f1efe8;--btnt:#1f1f1d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:20px 20px 28px;display:grid;gap:18px}
+.card{background:var(--card);border:.5px solid var(--bd);border-radius:12px;padding:16px 18px}
+h1{font-size:18px;font-weight:500;margin:0}
+.lab{font-size:13px;color:var(--sec);margin:0 0 6px}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+.mut{color:var(--sec);font-size:13px}
+.ship{display:flex;align-items:center;gap:12px}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--accbg);color:var(--acc);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500}
+.ship b{font-size:16px;font-weight:500}
+input[type=text]{width:100%;height:36px;border:.5px solid var(--bds);border-radius:var(--r);background:var(--card);color:var(--text);padding:0 10px;font:inherit;font-size:14px}
+input[type=text]:focus{outline:2px solid var(--acc);outline-offset:-1px}
+button{height:34px;border:.5px solid var(--bds);border-radius:var(--r);background:transparent;color:var(--text);padding:0 14px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+button:hover{background:var(--bg)}
+button.pri{background:var(--btn);color:var(--btnt);border-color:var(--btn);font-size:14px;padding:0 22px;height:38px}
+button.pri:hover{opacity:.88}
+.drop{border:1.5px dashed var(--bds);border-radius:var(--r);padding:20px;text-align:center;color:var(--sec);transition:.12s}
+.drop.over{border-color:var(--acc);background:var(--accbg);color:var(--text)}
+.drop a{color:var(--acc);cursor:pointer;text-decoration:underline}
+.file{display:flex;align-items:center;gap:10px;border:.5px solid var(--bd);border-radius:var(--r);padding:7px 12px;margin-top:8px}
+.file .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-size:12px;padding:2px 9px;border-radius:var(--r);white-space:nowrap}
+.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}
+.pill.err{background:var(--errbg);color:var(--err)}.pill.wait{background:var(--bg);color:var(--sec)}
+.x{cursor:pointer;color:var(--sec);font-size:18px;line-height:1;padding:0 2px;border:0;background:none;height:auto}
+.msg{font-size:13px;margin-top:6px}.msg.err{color:var(--err)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding:28px 16px;overflow:auto;z-index:5}
+.ov.show{display:flex}
+.modal{background:var(--card);border:.5px solid var(--bds);border-radius:12px;padding:18px 20px;width:100%;max-width:640px;display:grid;gap:12px}
+.modal h2{font-size:16px;font-weight:500;margin:0;display:flex;gap:8px;align-items:center}
+.ln{display:flex;gap:8px;font-size:14px;margin:5px 0}.ln i{font-style:normal;width:16px;flex:none;text-align:center;font-weight:500}
+.ln .d{display:block;font-size:12.5px;color:var(--sec)}
+.i-ok{color:var(--ok)}.i-warn{color:var(--warn)}.i-none{color:var(--mut)}
+.y{background:#ffff00;color:#000;padding:0 4px;border-radius:3px}
+.fn{font-size:13px;font-weight:500;margin:10px 0 2px;color:var(--sec)}
+.warnbox{background:var(--warnbg);border:.5px solid var(--warnbd);color:var(--warn);border-radius:var(--r);padding:10px 12px;font-size:13px}
+.foot{display:flex;justify-content:flex-end;gap:8px}
+.quit{font-size:12px;color:var(--mut);text-align:center}.quit a{cursor:pointer;text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card ship" id="ship"></div>
+
+  <div class="card">
+    <p class="lab">Master file</p>
+    <div class="row"><div class="grow"><input type="text" id="mpath" placeholder="C:\Ship\Master_FAL_Pre-arrival.xlsx" spellcheck="false"></div>
+      <button id="mchoose">Choose file</button></div>
+    <div class="msg mut" id="mstat"></div>
+  </div>
+
+  <div class="card">
+    <p class="lab">Port forms</p>
+    <div class="drop" id="drop">Drop port forms here<br><span class="mut">or <a id="browse">browse files</a>. One workbook with tabs, or several files.</span></div>
+    <input type="file" id="fin" multiple accept=".xlsx,.xlsm" hidden>
+    <div id="files"></div>
+  </div>
+
+  <div class="card">
+    <p class="lab">Results folder</p>
+    <div class="row"><div class="grow"><input type="text" id="opath" spellcheck="false"></div>
+      <button id="ochoose">Change folder</button></div>
+    <div class="msg mut" id="target"></div>
+    <div class="row" style="justify-content:space-between;margin-top:14px">
+      <span class="msg err" id="fillmsg" style="margin:0"></span>
+      <button class="pri" id="fill">Fill forms</button>
+    </div>
+  </div>
+  <div class="quit"><span id="lic"></span> · <a id="quit">Quit PortFill</a></div>
+</div>
+
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+
+<script>
+const TOKEN="__TOKEN__";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function api(path,opt={}){
+  opt.headers=Object.assign({"X-PortFill":TOKEN},opt.headers||{});
+  if(opt.json){opt.body=JSON.stringify(opt.json);opt.headers["Content-Type"]="application/json";opt.method=opt.method||"POST"}
+  const r=await fetch(path,opt);return r.json();
+}
+let S=null,busy=0;
+function render(st){
+  S=st;const m=st.master;
+  $("ship").innerHTML=m?`<div class="logo">&#9875;</div><div class="grow"><b>${esc(m.ship||"Unnamed ship")}</b><div class="mut">IMO ${esc(m.imo||"-")}</div></div>
+    <div class="mut" style="text-align:right">Next port<br><b style="color:var(--text);font-weight:500">${esc(m.port||"-")}${m.eta?", "+esc(m.eta):""}</b></div>`
+    :`<div class="logo">&#9875;</div><div class="grow"><b>PortFill</b><div class="mut">Choose your master file to begin</div></div>`;
+  if(document.activeElement!==$("mpath"))$("mpath").value=st.master_path||"";
+  if(document.activeElement!==$("opath"))$("opath").value=st.out_root||"";
+  const ms=$("mstat");
+  if(m){ms.className="msg mut";ms.textContent=`${m.sheets} sheets read · ${m.crew} crew lines · ${m.ports} port calls in the log`}
+  else if(st.master_error){ms.className="msg err";ms.textContent=st.master_error}
+  else{ms.className="msg mut";ms.textContent="Not chosen yet."}
+  $("target").textContent=m?`Saved in ${st.target}`:"A folder per port and voyage is created here, for example Antwerp 2026-10-24.";
+  $("lic").textContent=st.licence;
+  $("files").innerHTML=st.forms.map(f=>{
+    let pill;
+    if(f.error)pill=`<span class="pill err">${esc(f.error)}</span>`;
+    else if(f.waiting)pill=`<span class="pill wait">Waiting for master</span>`;
+    else if(!f.analysis)pill=`<span class="pill wait">Reading…</span>`;
+    else if(f.analysis.recognised>0)pill=`<span class="pill ok">${f.analysis.recognised} ${f.analysis.recognised==1?"form":"forms"} recognised</span>`;
+    else pill=`<span class="pill warn">No form recognised</span>`;
+    return `<div class="file"><span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${pill}<button class="x" data-id="${f.id}" aria-label="Remove">&times;</button></div>`}).join("");
+  document.querySelectorAll(".x").forEach(b=>b.onclick=async()=>render(await api("/api/forms/"+b.dataset.id,{method:"DELETE"})));
+}
+async function refresh(){render(await api("/api/state"))}
+async function upload(files){
+  const fd=new FormData();let n=0;
+  for(const f of files){if(/\.xlsx?m?$/i.test(f.name)||/\.xlsm$/i.test(f.name)){fd.append("files",f);n++}}
+  if(!n){$("fillmsg").textContent="Only Excel files (.xlsx) can be added.";return}
+  $("fillmsg").textContent="";
+  const hold=document.createElement("div");hold.className="file";hold.innerHTML=`<span class="nm">Reading ${n} file${n>1?"s":""}…</span><span class="pill wait">Reading…</span>`;
+  $("files").appendChild(hold);
+  render(await api("/api/forms",{method:"POST",body:fd}));
+}
+const drop=$("drop");
+["dragenter","dragover"].forEach(e=>document.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(e=>document.addEventListener(e,ev=>{ev.preventDefault();if(e==="drop"||ev.target===document.documentElement||!ev.relatedTarget)drop.classList.remove("over")}));
+document.addEventListener("drop",ev=>{if(ev.dataTransfer&&ev.dataTransfer.files.length)upload(ev.dataTransfer.files)});
+$("browse").onclick=()=>$("fin").click();
+$("fin").onchange=()=>{if($("fin").files.length)upload($("fin").files);$("fin").value=""};
+$("mpath").onchange=async()=>render(await api("/api/master",{json:{path:$("mpath").value}}));
+$("opath").onchange=async()=>render(await api("/api/outdir",{json:{path:$("opath").value}}));
+async function choose(kind){
+  const r=await api("/api/choose",{json:{kind}});
+  if(r.ok)render(r);else{$("fillmsg").textContent=r.message}
+}
+$("mchoose").onclick=()=>choose("file");$("ochoose").onclick=()=>choose("folder");
+$("quit").onclick=async()=>{await api("/api/quit",{method:"POST"});document.body.innerHTML="<p style='padding:40px;text-align:center'>PortFill has stopped. You can close this window.</p>"};
+
+function line(icon,cls,html,sub){return `<div class="ln"><i class="${cls}">${icon}</i><span>${html}${sub?`<span class="d">${sub}</span>`:""}</span></div>`}
+function showResult(r){
+  let h=`<h2><span class="i-ok">&#10003;</span> Port forms completed — ${esc(r.out_dir.split(/[\\/]/).pop())}</h2>`;
+  for(const it of r.items){
+    h+=`<div class="fn">${esc(it.name)}</div>`;
+    for(const n of it.notes)h+=line("!","i-warn",esc(n));
+    for(const s of it.sheets){
+      if(s.kind==="not recognised"){
+        if(!s.notes.some(x=>x.startsWith("Information sheet")))h+=line("–","i-none",`Sheet “${esc(s.name)}”: not recognised, left untouched`);
+        continue;
+      }
+      const sub=[];
+      if(s.unrecognised.length)sub.push("Fields not recognised: "+esc(s.unrecognised.join(", ")));
+      if(s.missing.length)sub.push("Not available in the master: "+esc(s.missing.join(", ")));
+      for(const n of s.notes)sub.push(esc(n));
+      const y=s.yellow?` — <span class="y">${s.yellow} ${s.yellow==1?"cell":"cells"}</span> marked yellow`:"";
+      const neutral=!s.yellow&&s.notes.length&&s.notes.every(x=>x.startsWith("This sheet is filled by formulas"));
+      const quiet=!s.yellow&&!s.notes.length&&/nothing to fill/.test(s.lines.join(" "));
+      const warn=(s.yellow||s.notes.length)&&!neutral;
+      h+=line(neutral||quiet?"–":(warn?"!":"&#10003;"),neutral||quiet?"i-none":(warn?"i-warn":"i-ok"),`${esc(s.kind)} (${esc(s.name)}): ${esc(s.lines.join("; "))}${y}`,sub.join("<br>"));
+    }
+  }
+  h+=`<div class="warnbox"><b style="font-weight:500">Important:</b> these forms were filled in automatically. You must always check every completed form yourself before it is submitted. The Master / user remains responsible for the content of the forms.</div>
+  <div class="foot"><button id="mopen">Open folder</button><button class="pri" id="mok">I have read this</button></div>`;
+  $("modal").innerHTML=h;$("ov").classList.add("show");
+  $("mopen").onclick=()=>api("/api/open",{json:{path:r.out_dir}});
+  $("mok").onclick=()=>{$("ov").classList.remove("show");refresh()};
+}
+$("fill").onclick=async()=>{
+  $("fillmsg").textContent="";const b=$("fill");b.textContent="Filling…";
+  const r=await api("/api/fill",{method:"POST"});b.textContent="Fill forms";
+  if(!r.ok){$("fillmsg").textContent=r.message;return}
+  showResult(r);
+};
+refresh();setInterval(()=>api("/api/ping",{method:"POST"}),5000);api("/api/ping",{method:"POST"});
+</script>
+</body>
+</html>
