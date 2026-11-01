@@ -1,0 +1,43 @@
+name: Build PortFill
+
+on:
+  workflow_dispatch:      # the "Run workflow" button on GitHub
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: mac-intel
+            os: macos-15-intel        # Intel Mac (last Intel runner on GitHub, available until Aug 2027)
+          - name: mac-apple-silicon
+            os: macos-latest          # Apple Silicon Mac (M1/M2/M3...)
+          - name: windows
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: Self-test
+        run: python selftest.py
+      - name: Build (Mac)
+        if: runner.os == 'macOS'
+        run: |
+          pyinstaller --noconfirm --windowed --name PortFill --add-data "ui.html:." portfill_app.py
+          ditto -c -k --keepParent dist/PortFill.app PortFill-${{ matrix.name }}.zip
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --name PortFill --add-data "ui.html;." portfill_app.py
+          Compress-Archive -Path dist/PortFill.exe -DestinationPath PortFill-${{ matrix.name }}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PortFill-${{ matrix.name }}
+          path: PortFill-${{ matrix.name }}.zip
