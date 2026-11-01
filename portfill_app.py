@@ -99,7 +99,9 @@ def native_dialog(kind):
     try:
         sysname = platform.system()
         if sysname == "Darwin":
-            what = "choose file of type {\"xlsx\", \"xlsm\"}" if kind == "file" else "choose folder"
+            # No file-type filter: on some macOS versions a filter by extension greys out every Excel file.
+            # The program checks the file itself afterwards.
+            what = "choose file with prompt \"Choose the master Excel file\"" if kind == "file" else "choose folder with prompt \"Choose the results folder\""
             out = subprocess.run(["osascript", "-e", f"POSIX path of ({what})"], capture_output=True, text=True, timeout=600)
             return out.stdout.strip() or None
         if sysname == "Windows":
