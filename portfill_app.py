@@ -264,6 +264,19 @@ def watchdog():
         if t is not None and time.time() - t > 25:
             os._exit(0)
 
+def run_server(port):
+    app.run(host="127.0.0.1", port=port, threaded=True, debug=False, use_reloader=False)
+
+def wait_for_server(port, seconds=15):
+    end = time.time() + seconds
+    while time.time() < end:
+        with socket.socket() as s:
+            s.settimeout(0.3)
+            if s.connect_ex(("127.0.0.1", port)) == 0:
+                return True
+        time.sleep(0.2)
+    return False
+
 def main():
     # A packaged windowed app has no console: give print/logging somewhere harmless to write
     if sys.stdout is None:
@@ -274,12 +287,26 @@ def main():
     logging.getLogger("werkzeug").setLevel(logging.ERROR)
     port = free_port()
     url = f"http://127.0.0.1:{port}/"
-    if not os.environ.get("PORTFILL_NO_WATCHDOG"):
-        threading.Thread(target=watchdog, daemon=True).start()
+    threading.Thread(target=run_server, args=(port,), daemon=True).start()
+    wait_for_server(port)
+
     if not os.environ.get("PORTFILL_NO_OPEN"):
-        threading.Timer(1.0, lambda: open_window(url)).start()
+        # Preferred: a real window of its own (built-in macOS / Windows web component, works offline)
+        try:
+            import webview
+            webview.create_window("PortFill", url, width=780, height=940, min_size=(620, 600))
+            webview.start()          # returns when the window is closed
+            os._exit(0)
+        except Exception as e:
+            print(f"Own window not available ({e.__class__.__name__}); using the browser instead.")
+        # Fallback: app-style window in Edge/Chrome, or the default browser
+        threading.Thread(target=watchdog, daemon=True).start()
+        open_window(url)
+    elif not os.environ.get("PORTFILL_NO_WATCHDOG"):
+        threading.Thread(target=watchdog, daemon=True).start()
     print(f"PortFill is running at {url}  (close the window to stop)")
-    app.run(host="127.0.0.1", port=port, threaded=True, debug=False)
+    while True:
+        time.sleep(3600)
 
 if __name__ == "__main__":
     main()
