@@ -14,6 +14,7 @@ import waste2 as W2
 import msw as MSW
 import fal1 as F1
 import fal4 as F4
+import poc as POC
 
 # openpyxl recomputes max_row / max_column over ALL cells at every call; on big templates (5000 empty
 # formatted rows) the program called them thousands of times. They are cached per sheet and reset when rows are added.
@@ -805,7 +806,15 @@ def process_sheet(ctx, ws):
         elif k == "security":
             MSW.fill_msw(ctx, ws, res)
             exclude |= {(r, c) for r in range(1, 30) for c in range(1, 12) if ws.cell(r, c).value is not None and r < 14}
+    _name = ctx["master"].fields.get("ship_name")
+    if _name:
+        _rx = re.compile(r'(m\.?v\.?\s*)"?\s*ship name\s*"?', re.I)
+        for (_r, _c), _cell in list(ws._cells.items()):
+            if isinstance(_cell.value, str) and not _cell.value.startswith("=") and _rx.search(_cell.value):
+                _cell.value = _rx.sub(lambda mm: mm.group(1) + re.sub(r"^\s*m\.?\s?v\.?\s+", "", str(_name), flags=re.I), _cell.value)
     if F1.is_fal1(ws) and F1.fill_fal1(ctx, ws, res):
+        return res
+    if POC.is_poc(ws) and POC.fill_poc(ctx, ws, res):
         return res
     if F4.fill_fal4(ctx, ws, res):
         return res
