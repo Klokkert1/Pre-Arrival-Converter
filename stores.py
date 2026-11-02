@@ -3,7 +3,7 @@ import re
 from openpyxl.cell.cell import MergedCell
 from matching import norm, compact
 
-ART = r"^(\d+\.?\d*\.?\s*)?(name of article|article|articles|name of the article|artikel|artikelbezeichnung|nombre del articulo|description of (the )?stores)\b"
+ART = r"^(\d+\.?\d*\.?\s*)?(name of article|number of article|article|articles|name of the article|artikel|artikelbezeichnung|nombre del articulo|description of (the )?stores)\b"
 QTY = ("quantity", "qty", "menge", "cantidad", "quantity kg ltr")
 UNIT = ("unit", "units", "einheit", "unidad")
 LOC = r"location on board|place of storage|location|lagerort|ubicacion|stowage"
@@ -17,7 +17,8 @@ HEADER = [
     ("voyage_no", r"^voyage number|^reisenummer"),
     ("port", r"^port of arrival ?/ ?departure|^port of (arrival|departure)"),
     ("date", r"^date of arrival ?/ ?departure|^date of (arrival|departure)"),
-    ("flag", r"^flag state|^flag of ship|^flagge"),
+    ("flag", r"^flag state|^flag of ship|^flagge|^nationality of ship"),
+    ("from_dest", r"^port arrived from|port of destination"),
     ("lastnext", r"last port of call ?/ ?next port of call|last/next port"),
     ("persons", r"^number of persons on board|^persons on board"),
 ]
@@ -189,11 +190,12 @@ def fill_header(ctx, ws, res, upto_row):
     vals = {"ship_name": f.get("ship_name"), "imo": f.get("imo"), "call_sign": f.get("call_sign"),
             "voyage_no": f.get("voyage_no"), "port": f.get("port"), "date": date, "flag": f.get("flag"),
             "lastnext": (f"{f.get('last_port')} / {f.get('next_port')}" if f.get("last_port") or f.get("next_port") else None),
+            "from_dest": (f.get("next_port") if dep else f.get("last_port")),
             "persons": (len(master.crew) + len(master.pax)) if master.crew else None}
     import convert as C
     count = 0
     for r in range(1, upto_row):
-        for c in range(1, min(ws.max_column, 12) + 1):
+        for c in range(1, min(ws.max_column, 20) + 1):
             cell = ws.cell(r, c)
             v = cell.value
             if isinstance(cell, MergedCell) or not isinstance(v, str):

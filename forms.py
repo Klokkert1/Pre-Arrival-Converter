@@ -15,6 +15,8 @@ import msw as MSW
 import fal1 as F1
 import fal4 as F4
 import poc as POC
+import nmsw as NM
+import shipdetails as SD
 
 # openpyxl recomputes max_row / max_column over ALL cells at every call; on big templates (5000 empty
 # formatted rows) the program called them thousands of times. They are cached per sheet and reset when rows are added.
@@ -812,6 +814,10 @@ def process_sheet(ctx, ws):
         for (_r, _c), _cell in list(ws._cells.items()):
             if isinstance(_cell.value, str) and not _cell.value.startswith("=") and _rx.search(_cell.value):
                 _cell.value = _rx.sub(lambda mm: mm.group(1) + re.sub(r"^\s*m\.?\s?v\.?\s+", "", str(_name), flags=re.I), _cell.value)
+    if SD.is_shipdetails(ws) and SD.fill_shipdetails(ctx, ws, res):
+        return res
+    if NM.is_nmsw(ws) and NM.fill_nmsw(ctx, ws, res):
+        return res
     if F1.is_fal1(ws) and F1.fill_fal1(ctx, ws, res):
         return res
     if POC.is_poc(ws) and POC.fill_poc(ctx, ws, res):
