@@ -9,15 +9,16 @@ NUMLABEL = re.compile(r"^\s*\d{1,2}(\.\d{1,2})*\.?\s+\S")
 STOP = re.compile(r"confirm|signature|firma|fecha \(date\)|date and sig|i hereby|^\s*fecha\b", re.I)
 
 COLS = [  # order matters: specific before general
-    ("w_next_port", r"puerto en el que|port at which|next port of delivery|where (the )?remaining"),
+    ("w_skip", r"date of delivery|time of unloading|time of delivery"),
+    ("w_next_port", r"puerto en el que|port at which|next port of delivery|next delivery port|port of delivery|where (the )?remaining"),
     ("w_delivered_last", r"entregad[oa]s? en el [uú]ltimo|delivered (at|in) (the )?last|[uú]ltimo puerto de descarga|last port of (delivery|discharge)"),
-    ("w_generated", r"estimaci|cantidad estimada|estimated"),
-    ("w_capacity", r"capacidad|capacity"),
+    ("w_generated", r"estimaci|cantidad estimada|estimate"),
+    ("w_capacity", r"capacidad|capacity|max(imum)? (dedicated )?storage"),
     ("w_onboard", r"quedan a bordo|remain|retained|on board|a bordo"),
-    ("w_deliver", r"para entregar|to be delivered|to deliver|a entregarse|entregar"),
+    ("w_deliver", r"para entregar|to be delivered|to deliver|a entregarse|entregar|for delivery"),
 ]
 LABELCOL = re.compile(r"descripci[oó]n|description")
-TYPECOL = re.compile(r"^\W*(tipo|type)\b")
+TYPECOL = re.compile(r"^\W*(waste )?(tipo|type)\b")
 
 CODE = [  # (regex on the lower-cased row label, master waste code)
     (r"bilge|sentina|bilgewasser", "101"),
@@ -42,8 +43,8 @@ CODE = [  # (regex on the lower-cased row label, master waste code)
 NLS = re.compile(r"anexo ii\b|annex ii\b|\bnls\b|noxious|nocivas", re.I)
 
 FIELDS = [
-    ("w_last_date", r"fecha de (la )?[uú]ltima entrega|date of (the )?last delivery|last delivery"),
-    ("w_last_port", r"[uú]ltimo puerto en el que|last port (at which|where)"),
+    ("w_last_date", r"fecha de (la )?[uú]ltima entrega|date of (the )?last delivery|last delivery|last disposal date"),
+    ("w_last_port", r"[uú]ltimo puerto en el que|last port (at which|where)|port of last delivery|last port waste delivered|last disposal port"),
     ("w_next_port", r"siguiente puerto de entrega|next port of delivery"),
     ("terminal", r"terminal|localidad"),
     ("eta_dt", r"estimated (date and time of )?arrival|fecha y hora estimada de (la )?llegada|\beta\b|estimated time of arrival"),
@@ -80,7 +81,7 @@ def find_table(ws):
             v = cell.value
             if isinstance(cell, MergedCell) or not isinstance(v, str):
                 continue
-            t = re.sub(r"\s+", " ", v).strip().lower()
+            t = re.sub(r"\s+", " ", v.replace("_", " ")).strip().lower()
             for k, rx in COLS:
                 if re.search(rx, t):
                     cols.setdefault(c, k)
@@ -91,6 +92,10 @@ def find_table(ws):
                 elif TYPECOL.search(t) and typecol is None:
                     typecol = c
         if len(set(cols.values())) >= 3:
+            nxt = sum(1 for c in cols if isinstance(ws.cell(r + 1, c).value, str)
+                      and any(re.search(rx, ws.cell(r + 1, c).value.replace("_", " ").lower()) for _, rx in COLS))
+            if nxt >= 2:           # technical header row followed by a readable one (MSW templates)
+                r += 1
             return {"row": r, "cols": cols, "label": labelcol or typecol or 1, "alt": typecol or 1}
     return None
 
@@ -189,6 +194,16 @@ def fill_fields(ctx, ws, res, upto_row):
             "etd_dt": f.get("etd_departure"), "last_port": f.get("last_port"), "next_port": f.get("next_port"),
             "submitter": f.get("master_name"), "w_last_port": wh.get("w_last_port"), "w_last_date": wh.get("w_last_date"),
             "w_next_port": wh.get("w_next_port"), "company_imo": f.get("company_imo")}
+    import msw as MSW
+    msw = MSW.is_msw_book(ctx["wb"])
+    if msw:
+        def loc(name):
+            for p in master.ports:
+                if p.get("port") == name and p.get("locode"):
+                    return p["locode"]
+            return name
+        vals["w_last_port"] = loc(vals["w_last_port"]) if vals["w_last_port"] else None
+        vals["w_next_port"] = f.get("next_port_locode") or (loc(vals["w_next_port"]) if vals["w_next_port"] else None)
     seen, count = set(), 0
     for r in range(1, min(upto_row, ws.max_row + 1)):
         row_labels = [re.sub(r"\s+", " ", str(ws.cell(r, c).value)).lower() for c in range(1, min(ws.max_column, 30) + 1)
@@ -198,8 +213,14 @@ def fill_fields(ctx, ws, res, upto_row):
             v = cell.value
             if isinstance(cell, MergedCell) or (r, c) in seen or not isinstance(v, str) or not (3 < len(v.strip()) < 160):
                 continue
+            if MSW.TECH.match(v.strip()):
+                continue
             lab = re.sub(r"^\d+(\.\d+)*\.?\s*", "", re.sub(r"\s+", " ", v).strip().lower())
             key = next((k for k, rx in FIELDS if re.search(rx, lab)), None)
+            if re.search(r"port of last delivery", lab):
+                key = "w_last_port"
+            if msw and lab in ("date:", "date"):
+                key = "w_last_date"
             if not key:
                 continue
             if key == "imo" and any(re.search(r"compa[ñn][ií]a|\bcompany\b", x) for x in row_labels):
@@ -212,7 +233,11 @@ def fill_fields(ctx, ws, res, upto_row):
                 t = x.value
                 return isinstance(t, str) and (_label_ok(t) or t.strip().endswith(":") or
                                                any(re.search(rx, re.sub(r"\s+", " ", t).lower()) for _, rx in FIELDS))
-            if not is_label(below) and (not blank(below.value) or has_border(below)) and below.row > r1:
+            if msw:
+                rc = anchor(ws, r0, c1 + 1)
+                if not blank(rc.value) and not is_label(rc):
+                    tgt = rc
+            if tgt is None and below.row < upto_row and not is_label(below) and (not blank(below.value) or has_border(below)) and below.row > r1:
                 tgt = below
             for col in (range(c1 + 1, min(c1 + 7, ws.max_column + 1)) if tgt is None else []):
                 cand = anchor(ws, r0, col)

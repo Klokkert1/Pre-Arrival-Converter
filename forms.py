@@ -11,6 +11,7 @@ import convert as C
 import health as H
 import stores as ST
 import waste2 as W2
+import msw as MSW
 
 # openpyxl recomputes max_row / max_column over ALL cells at every call; on big templates (5000 empty
 # formatted rows) the program called them thousands of times. They are cached per sheet and reset when rows are added.
@@ -314,7 +315,7 @@ def convert_cell(ctx, ws, cell, concept, rec, hints, mandatory, rule):
     if concept in V.NOT_IN_MASTER:
         return None, "missing"
     if concept == "port":
-        want_locode = "locode" in norm(hints)
+        want_locode = "locode" in norm(hints) or MSW.is_msw_book(ctx["wb"])
         raw = (rec.get("locode") or rec.get("port")) if want_locode else rec.get("port")
         return (raw, "ok") if not blank(raw) else (None, "missing" if mandatory else "blank")
     raw = rec.get(concept)
@@ -726,6 +727,20 @@ def process_sheet(ctx, ws):
     is_mdoh = H.is_health(ws)
     title_text = norm(ws.title + " " + " ".join(str(ws.cell(r, c).value) for r in range(1, 9)
                                                 for c in range(1, 6) if ws.cell(r, c).value))
+    # 0) MSW upload templates
+    if MSW.is_msw_book(ctx["wb"]):
+        k = MSW.key(ws.title)
+        if k == "wastereceipt":
+            res.note("Waste receipt is completed after the port call; left untouched.")
+            return res
+        if k == "wasteandresidues" and W2.fill_waste_sheet(ctx, ws, res):
+            return res
+        if k in MSW.MSW_SHEETS and k != "security":
+            if MSW.fill_msw(ctx, ws, res):
+                return res
+        elif k == "security":
+            MSW.fill_msw(ctx, ws, res)
+            exclude |= {(r, c) for r in range(1, 30) for c in range(1, 12) if ws.cell(r, c).value is not None and r < 14}
     # 1) ship's stores
     n_art = sum(1 for (r, c), cell in list(ws._cells.items())
                 if c == 1 and isinstance(cell.value, str) and re.match(r"^\s*\d{3}\s*-\s*\S", cell.value))
