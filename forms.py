@@ -17,6 +17,7 @@ import fal4 as F4
 import poc as POC
 import nmsw as NM
 import shipdetails as SD
+import cers3 as CE
 
 # openpyxl recomputes max_row / max_column over ALL cells at every call; on big templates (5000 empty
 # formatted rows) the program called them thousands of times. They are cached per sheet and reset when rows are added.
@@ -210,6 +211,8 @@ def detect_tables(ws, vocab, min_hits=3):
             if concept not in used or concept in ("serial",):
                 t.cols[c] = concept
                 used.add(concept)
+            elif concept == "port":
+                t.cols[c] = "port_name"          # a second port column (e.g. 'Port LOCODE' and 'Port name')
         t.texts = texts
         for c, tx in texts.items():
             t.hints[c] = " ".join(tx)
@@ -319,7 +322,7 @@ def convert_cell(ctx, ws, cell, concept, rec, hints, mandatory, rule):
     """Return (value, status). status: ok | blank | missing | unsure."""
     if concept in V.NOT_IN_MASTER:
         return None, "missing"
-    if concept == "port":
+    if concept in ("port", "port_name"):
         want_locode = "locode" in norm(hints) or MSW.is_msw_book(ctx["wb"])
         raw = (rec.get("locode") or rec.get("port")) if want_locode else rec.get("port")
         return (raw, "ok") if not blank(raw) else (None, "missing" if mandatory else "blank")
@@ -463,6 +466,10 @@ def fill_table(ctx, ws, t, records, res):
             if status == "ok" or (status == "unsure" and val is not None):
                 if blank(cell.value) or not is_formula(cell.value):
                     cell.value = val
+            elif status in ("blank", "missing") and not blank(cell.value) and not is_formula(cell.value) \
+                    and concept not in ("serial",):
+                cell.value = None                       # old value of an earlier voyage; the master has nothing here
+                status = "missing"
             if status in ("missing", "unsure"):
                 mark(cell)
                 res.yellow += 1
@@ -814,6 +821,12 @@ def process_sheet(ctx, ws):
         for (_r, _c), _cell in list(ws._cells.items()):
             if isinstance(_cell.value, str) and not _cell.value.startswith("=") and _rx.search(_cell.value):
                 _cell.value = _rx.sub(lambda mm: mm.group(1) + re.sub(r"^\s*m\.?\s?v\.?\s+", "", str(_name), flags=re.I), _cell.value)
+    _cers = CE.is_cers(ctx["wb"]) and ws.title.lower() in ("vessel", "voyage", "waste", "security")
+    if _cers:
+        CE.fill_cers(ctx, ws, res)
+        if ws.title.lower() in ("vessel", "voyage", "waste"):
+            return res
+        exclude |= {(_r, _c) for _r in range(1, 34) for _c in range(1, 16)}
     if SD.is_shipdetails(ws) and SD.fill_shipdetails(ctx, ws, res):
         return res
     if NM.is_nmsw(ws) and NM.fill_nmsw(ctx, ws, res):

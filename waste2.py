@@ -113,7 +113,7 @@ def waste_code(label, section_nls=False):
     return None
 
 
-def fill_table(ctx, ws, res, tb):
+def fill_table(ctx, ws, res, tb, keep_unmatched=False):
     from forms import anchor, span, mark, is_formula
     master = ctx["master"]
     mrows = {}
@@ -147,8 +147,10 @@ def fill_table(ctx, ws, res, tb):
         has_data = any(not blank(x.value) and not is_formula(x.value) for x in cells.values())
         code = waste_code(label, section_nls)
         m = mrows.get(code) if code else None
+        if m is not None and keep_unmatched and code in used:
+            m = None            # second form line with the same waste class: leave it as it is
         if m is None:
-            if has_data:
+            if has_data and not keep_unmatched:
                 for x in cells.values():
                     if not blank(x.value) and not is_formula(x.value):
                         x.value = None
