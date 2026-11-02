@@ -12,6 +12,8 @@ import health as H
 import stores as ST
 import waste2 as W2
 import msw as MSW
+import fal1 as F1
+import fal4 as F4
 
 # openpyxl recomputes max_row / max_column over ALL cells at every call; on big templates (5000 empty
 # formatted rows) the program called them thousands of times. They are cached per sheet and reset when rows are added.
@@ -390,8 +392,7 @@ def doc_rows(ws, t, records):
     if not cont and scol and dcols:      # blank form: numbers printed on every second line, document codes (P / SB) printed
         r0 = t.data_start
         if not blank(ws.cell(r0, scol[0]).value) and blank(ws.cell(r0 + 1, scol[0]).value) \
-                and not blank(ws.cell(r0 + 2, scol[0]).value) \
-                and all(not blank(ws.cell(r0 + k, dcols[0]).value) for k in range(4)):
+                and not blank(ws.cell(r0 + 2, scol[0]).value) and blank(ws.cell(r0 + 3, scol[0]).value):
             cont = True
     if not cont:
         return records, False
@@ -804,6 +805,10 @@ def process_sheet(ctx, ws):
         elif k == "security":
             MSW.fill_msw(ctx, ws, res)
             exclude |= {(r, c) for r in range(1, 30) for c in range(1, 12) if ws.cell(r, c).value is not None and r < 14}
+    if F1.is_fal1(ws) and F1.fill_fal1(ctx, ws, res):
+        return res
+    if F4.fill_fal4(ctx, ws, res):
+        return res
     # 1) ship's stores
     n_art = sum(1 for (r, c), cell in list(ws._cells.items())
                 if c == 1 and isinstance(cell.value, str) and re.match(r"^\s*\d{3}\s*-\s*\S", cell.value))

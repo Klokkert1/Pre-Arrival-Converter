@@ -35,6 +35,10 @@ LABEL_TO_ID = {
     "Deadweight (DWT, tonnes)": "dwt", "Length overall (LOA, m)": "length", "Beam (m)": "breadth",
     "Draught forward (m)": "draft_fore", "Draught aft (m)": "draft_aft", "MMSI": "mmsi",
     "Ship e-mail": "ship_email", "Ship phone / satcom": "ship_phone", "Owner / manager": "owner",
+    "Certificate of registry (port; date; number)": "cert_registry", "Brief particulars of voyage": "voyage_particulars",
+    "Brief description of the cargo": "cargo_desc", "Number of crew": "n_crew", "Number of passengers": "n_pax",
+    "Remarks": "remarks", "Cargo declaration": "att_cargo", "Ship’s stores declaration": "att_stores",
+    "Crew list": "att_crew", "Passenger list": "att_pax", "Crew’s effects declaration (arrival only)": "att_effects",
     "Passengers": "nil_passengers", "Animals": "nil_animals", "Arms and ammunition": "nil_arms",
     "Stowaways": "nil_stowaways",
 }
@@ -83,6 +87,7 @@ class Master:
                     self.health[HEALTH_LABELS[label]] = val
         self.crew = self._table("Crew_List", PERSON, key="family_name")
         self._crew_documents()
+        self._crew_effects()
         self.pax = self._table("Passengers", PERSON, key="family_name")
         self.ports = self._table("Last_10_Ports", PORTS, key="port", header_row=5, first=6, last=15)
         self.stores = self._stores()
@@ -144,6 +149,24 @@ class Master:
                     for k in [k for k, v in rec.items() if v is None]:
                         del rec[k]
                     break
+
+    def _crew_effects(self):
+        """Crew_Effects sheet (FAL 4): cigarettes / tobacco / wines-spirits / cash / electronics per crew member."""
+        if "Crew_Effects" not in self.wb.sheetnames or "Crew_List" not in self.wb.sheetnames:
+            return
+        ce, cl = self.wb["Crew_Effects"], self.wb["Crew_List"]
+        keys = {5: "eff_cig", 6: "eff_tob", 7: "eff_wine", 8: "eff_cash", 9: "eff_elec"}
+        recs = iter(self.crew)
+        for r in range(6, cl.max_row + 1):
+            if cl.cell(r, 2).value in (None, ""):
+                continue
+            rec = next(recs, None)
+            if rec is None:
+                break
+            for c, k in keys.items():
+                v = ce.cell(r, c).value
+                if v not in (None, ""):
+                    rec[k] = v
 
     def _stores(self):
         if "Ship_Stores" not in self.wb.sheetnames:
