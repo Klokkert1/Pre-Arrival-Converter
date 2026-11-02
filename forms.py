@@ -8,6 +8,7 @@ from openpyxl.utils import get_column_letter as L
 from matching import match, norm, compact, hint_text
 import vocabulary as V
 import convert as C
+import health as H
 
 YELLOW = PatternFill("solid", fgColor="FFFF00")
 DATE_CONCEPTS = {"dob", "id_issue_date", "id_expiry", "date_emb", "date_disemb", "arrival", "departure"}
@@ -191,7 +192,18 @@ def detect_tables(ws, vocab, min_hits=3):
             data_start += 1
         t.data_start = data_start
         t.serial_col = next((c for c, k in t.cols.items() if k == "serial"), None)
-        r, cap = data_start, 0
+        sc = t.serial_col or (min(keycols) - 1 if keycols and min(keycols) > 1 else None)
+        if sc:
+            # a second header line in another language: text only, while the lines below are numbered
+            for _ in range(2):
+                nxt = ws.cell(t.data_start + 1, sc).value
+                texts_only = [ws.cell(t.data_start, c).value for c in keycols
+                              if not isinstance(ws.cell(t.data_start, c), MergedCell)]
+                texts_only = [x for x in texts_only if not blank(x)]
+                if blank(ws.cell(t.data_start, sc).value) and not blank(nxt) and re.fullmatch(r"\d{1,3}", str(nxt).strip()) \
+                        and texts_only and all(isinstance(x, str) and not re.search(r"\d", x) for x in texts_only):
+                    t.data_start += 1
+        r, cap = t.data_start, 0
         while r <= ws.max_row + 1:
             row_has = any(has_border(ws.cell(r, c)) for c in keycols[:3])
             if t.serial_col and not blank(ws.cell(r, t.serial_col).value):
@@ -370,6 +382,19 @@ def fill_table(ctx, ws, t, records, res):
                 cell = anchor(ws, row, c)
             mark(cell)
             res.yellow += 1
+    cleared = 0
+    for row in range(t.data_start + len(records), t.data_start + t.capacity):
+        for c, concept in t.cols.items():
+            if concept == "serial":
+                continue
+            cell = ws.cell(row, c)
+            if isinstance(cell, MergedCell):
+                continue
+            if not blank(cell.value) and not is_formula(cell.value):
+                cell.value = None
+                cleared += 1
+    if cleared:
+        res.note(f"{cleared} old value(s) from an earlier call were removed from the empty lines of this table.")
     for c in t.unmatched:
         res.unrecognised.append(t.texts[c][-1].strip().lstrip("*# ").strip())
     res.missing.extend(sorted(yellow_missing))
@@ -670,6 +695,7 @@ def process_sheet(ctx, ws):
         return res
     master = ctx["master"]
     exclude = set()
+    is_mdoh = H.is_health(ws)
     title_text = norm(ws.title + " " + " ".join(str(ws.cell(r, c).value) for r in range(1, 9)
                                                 for c in range(1, 6) if ws.cell(r, c).value))
     # 1) ship's stores
@@ -697,6 +723,9 @@ def process_sheet(ctx, ws):
         chosen.append((kind, t))
         seen.update(t.rows)
     tables = [(k, t) for k, t in chosen if (k != "person" or len(set(t.cols.values())) >= PERSON_MIN)]
+    if is_mdoh:
+        tables = [(k, t) for k, t in tables if k == "ports"]
+        ctx["has_ports_table"] = bool(tables)
     for kind, t in tables:
         for r in t.rows:
             for c in range(1, ws.max_column + 1):
@@ -729,6 +758,9 @@ def process_sheet(ctx, ws):
             res.kind = "Waste"
             n = fill_waste(ctx, ws, t, res)
             res.lines.append(f"{n} waste {'line' if n == 1 else 'lines'} filled")
+    if is_mdoh:
+        H.fill_health(ctx, ws, res, exclude)
+        return res
     # 3) single fields
     sec_hits = 0
     if not tables:
@@ -754,7 +786,7 @@ def process_sheet(ctx, ws):
 def process_workbook(master, path, out_dir):
     import os
     wb = load_workbook(path)
-    ctx = {"master": master, "wb": wb, "rules": parse_instructions(wb)}
+    ctx = {"master": master, "wb": wb, "rules": parse_instructions(wb), "path": path}
     results = []
     for ws in wb.worksheets:
         if ws.sheet_state != "visible":

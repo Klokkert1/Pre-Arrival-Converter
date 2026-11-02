@@ -36,12 +36,38 @@ LABEL_TO_ID = {
     "Stowaways": "nil_stowaways",
 }
 
+# Maritime Declaration of Health: (concept id, label on sheet Health, [(detail id, detail label)])
+HEALTH_QUESTIONS = [
+    ("death", "Death on board during the voyage (other than by accident)?", [("death_count", "Total number of deaths")]),
+    ("infectious", "Case or suspected case of infectious disease on board during the voyage?", []),
+    ("ill_pax", "Total number of ill passengers greater than normal / expected?", [("ill_count", "How many ill persons")]),
+    ("ill_now", "Any ill person on board now?", []),
+    ("doctor", "Medical practitioner consulted?", []),
+    ("condition", "Condition on board which may lead to infection or spread of disease?", []),
+    ("sanitary", "Sanitary measure (quarantine, isolation, disinfection, decontamination) applied on board?",
+     [("san_measure", "Sanitary measure – type, place and date")]),
+    ("stowaways", "Stowaways found on board?", [("stow_where", "Stowaways – where did they join the ship (if known)?")]),
+    ("animal", "Sick animal or pet on board?", []),
+    ("affected", "Ship has visited an area affected as identified by the WHO?",
+     [("affected_where", "Affected area – port and date of visit")]),
+    ("rats", "Plague suspected among rats or mice, or abnormal mortality among them?", []),
+    ("doctor_onboard", "Doctor on board?", []),
+]
+HEALTH_LABELS = {}
+for _c, _l, _d in HEALTH_QUESTIONS:
+    HEALTH_LABELS[_l] = _c
+    for _dc, _dl in _d:
+        HEALTH_LABELS[_dl] = _dc
+HEALTH_LABELS["Particulars of cases / deaths / sick persons (schedule)"] = "particulars"
+
+
 class Master:
     def __init__(self, path):
         self.path = path
         wb = load_workbook(path, data_only=True)
         self.wb = wb
         self.fields = {}
+        self.health = {}
         for sheet in ("Ship", "Voyage", "Security", "Health", "Nil_List"):
             if sheet not in wb.sheetnames:
                 continue
@@ -50,8 +76,8 @@ class Master:
                 label, val = ws.cell(r, 2).value, ws.cell(r, 3).value
                 if label in LABEL_TO_ID and val not in (None, ""):
                     self.fields[LABEL_TO_ID[label]] = val
-                elif isinstance(label, str) and sheet == "Health" and label.startswith("Q") and val not in (None, ""):
-                    self.fields["health_" + label.split(" ")[0].lower()] = val
+                elif sheet == "Health" and label in HEALTH_LABELS and val not in (None, ""):
+                    self.health[HEALTH_LABELS[label]] = val
         self.crew = self._table("Crew_List", PERSON, key="family_name")
         self._crew_documents()
         self.pax = self._table("Passengers", PERSON, key="family_name")
