@@ -26,7 +26,7 @@ PERSON = {
                   "number of id document", "id document number", "passport number", "ausweisnummer",
                   "numero de documento", "numero del documento de identidad"],
     "id_issue_date": ["date of issue", "issue date", "ausstellungsdatum", "fecha de expedicion"],
-    "id_expiry": ["date of validity", "expiry date", "expiration date", "valid until", "date of expiry",
+    "id_expiry": ["date of validity", "expiry date", "expire date", "expiration date", "valid until", "date of expiry",
                   "gultig bis", "ablaufdatum", "fecha de caducidad", "fecha de vencimiento"],
     "id_issue_country": ["country of issue", "issuing state", "issuing country", "ausstellungsland",
                          "ausstellender staat", "pais de expedicion"],

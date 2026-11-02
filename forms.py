@@ -369,9 +369,49 @@ def convert_cell(ctx, ws, cell, concept, rec, hints, mandatory, rule):
     return raw, "ok"
 
 
+ID_SET = {"id_type", "id_number", "id_issue_country", "id_expiry", "id_issue_date", "issuer_entity"}
+
+
+def doc_rows(ws, t, records):
+    """Forms (e.g. IMO FAL 5) that show a second line per person with only the identity-document fields:
+    when the form's own example data has such lines, each person gets one line per document."""
+    pcols = [c for c, k in t.cols.items() if k in ("family_name", "given_names")]
+    dcols = [c for c, k in t.cols.items() if k in ("id_number", "id_type")]
+    if not pcols or not dcols:
+        return records, False
+    cont = False
+    for row in range(t.data_start + 1, t.data_start + min(t.capacity, 60)):
+        if all(blank(ws.cell(row, c).value) for c in pcols) and any(not blank(ws.cell(row, c).value) for c in dcols) \
+                and not any(is_formula(ws.cell(row, c).value) for c in dcols) \
+                and not blank(ws.cell(row - 1, pcols[0]).value):
+            cont = True
+            break
+    if not cont:
+        return records, False
+    out = []
+    for r in records:
+        first = dict(r)
+        out.append(first)
+        if r.get("pp_no") and r.get("sb_no"):
+            out.append({"_cont": True, "id_type": "Seaman's book", "id_number": r["sb_no"],
+                        "id_issue_country": r.get("sb_state"), "id_expiry": r.get("sb_exp")})
+            first.update({"id_type": "Passport", "id_number": r["pp_no"], "id_issue_country": r.get("pp_state"),
+                          "id_expiry": r.get("pp_exp")})
+            for k in [k for k, v in first.items() if v is None]:
+                del first[k]
+        else:
+            out.append({"_cont": True})      # keep the two-line layout; second line stays empty
+    return out, True
+
+
 def fill_table(ctx, ws, t, records, res):
     if not records:
         return 0
+    n_people = len(records)
+    if t.cols and "id_number" in t.cols.values() and ctx.get("crew_recs") is records:
+        records, paired = doc_rows(ws, t, records)
+        if paired:
+            res.note("Passport and seaman's book are entered on two lines per person, as this form shows.")
     # skip tables that are driven by formulas
     probe = [ws.cell(t.data_start, c).value for c in t.cols]
     if any(is_formula(v) for v in probe):
@@ -380,19 +420,31 @@ def fill_table(ctx, ws, t, records, res):
     if len(records) > t.capacity:
         extend_table(ws, t, len(records) - t.capacity, res)
     yellow_missing = set()
+    person_no = 0
     for i, rec in enumerate(records):
         row = t.data_start + i
+        cont = bool(rec.get("_cont"))
+        if not cont:
+            person_no += 1
         for c, concept in t.cols.items():
             cell = ws.cell(row, c)
+            if cont and concept not in ID_SET:
+                if not isinstance(cell, MergedCell) and not blank(cell.value) and not is_formula(cell.value):
+                    cell.value = None
+                continue
             if isinstance(cell, MergedCell):
                 cell = anchor(ws, row, c)
             if concept == "serial":
                 if blank(cell.value):
-                    cell.value = i + 1
+                    cell.value = person_no
                 continue
             rule = rule_for(ctx, t.texts.get(c, []))
             mand = c in t.mandatory or bool(re.search(r"is mandatory\.", rule, re.I))
             val, status = convert_cell(ctx, ws, cell, concept, rec, t.hints.get(c, ""), mand, rule)
+            if cont and status in ("blank", "missing"):
+                if not blank(cell.value) and not is_formula(cell.value):
+                    cell.value = None
+                continue
             if status == "ok" or (status == "unsure" and val is not None):
                 if blank(cell.value) or not is_formula(cell.value):
                     cell.value = val
@@ -426,7 +478,7 @@ def fill_table(ctx, ws, t, records, res):
     for c in t.unmatched:
         res.unrecognised.append(t.texts[c][-1].strip().lstrip("*# ").strip())
     res.missing.extend(sorted(yellow_missing))
-    return len(records)
+    return n_people
 
 
 # ------------------------------------------------------------------ single fields (label / value)
@@ -790,6 +842,7 @@ def process_sheet(ctx, ws):
             is_pax = ("passenger" in title_text or "passagier" in title_text or "pasajero" in title_text) \
                      and "crew" not in title_text
             recs = master.pax if is_pax else master.crew
+            ctx["crew_recs"] = recs if not is_pax else None
             res.kind = "Passenger list" if is_pax else "Crew list"
             n = fill_table(ctx, ws, t, recs, res)
             res.lines.append(f"{n} of {len(recs)} {'line' if len(recs) == 1 else 'lines'} filled" if recs else "no data in the master, nothing to fill")
