@@ -38,6 +38,7 @@ def find(ws):
 
 
 def fill_fal4(ctx, ws, res):
+    import convert as C
     from forms import mark, anchor, is_formula, blank
     hit = find(ws)
     if not hit:
@@ -74,11 +75,19 @@ def fill_fal4(ctx, ws, res):
                 val = f.get("flag")
             elif t.startswith("time of arrival") and eta is not None and hasattr(eta, "hour"):
                 val = eta.strftime("%H:%M:%S")
+            elif t.startswith("date of arrival") and eta is not None:
+                val = C.to_date(eta)
+            elif t.startswith("date of departure") and f.get("etd_departure") is not None:
+                val = C.to_date(f.get("etd_departure"))
+            elif t.startswith("time of departure") and hasattr(f.get("etd_departure"), "hour"):
+                val = f.get("etd_departure").strftime("%H:%M:%S")
             if val is None:
                 continue
             tgt = anchor(ws, r, c + 1)
             if tgt is not None and not is_formula(tgt.value) and not isinstance(tgt, MergedCell):
                 tgt.value = val
+                if hasattr(val, "year") and not C.is_date_format(tgt.number_format):
+                    tgt.number_format = "dd-mm-yyyy"
                 n += 1
     r0 = hr + 1
     tracked = {"cig": "eff_cig", "tob": "eff_tob", "wine": "eff_wine"}

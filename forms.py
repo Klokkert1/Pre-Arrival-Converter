@@ -535,11 +535,11 @@ def fill_fields(ctx, ws, res, allowed_fields, exclude, section_aware=False):
     found = []
     section = None
     for r in range(1, min(ws.max_row, 60) + 1):
-        for c in range(1, min(ws.max_column, 12) + 1):
+        for c in range(1, min(ws.max_column, 20) + 1):
             if (r, c) in exclude:
                 continue
             v = ws.cell(r, c).value
-            if not isinstance(v, str) or not v.strip() or len(v) > 60 or isinstance(ws.cell(r, c), MergedCell):
+            if not isinstance(v, str) or not v.strip() or len(v) > 90 or isinstance(ws.cell(r, c), MergedCell):
                 continue
             n = norm(v)
             if section_aware:
@@ -598,12 +598,33 @@ def fill_fields(ctx, ws, res, allowed_fields, exclude, section_aware=False):
             continue
         key = "w_next_port" if concept == "w_next_port_hdr" else concept
         raw = master.fields.get(key) if key in master.fields else master.waste["header"].get(key)
+        if concept == "eta_dt":
+            raw = master.fields.get("eta_arrival") or master.fields.get("eta")
+        if concept in ("port_mv", "port_arr", "port_dep", "date_mv", "date_arr", "date_dep"):
+            _f = master.fields
+            _dep = str(_f.get("movement") or "Arrival").strip().lower().startswith("dep")
+            if concept == "port_mv" or concept == "port_arr" or (concept == "port_dep" and _dep):
+                raw = _f.get("port")
+            elif concept == "port_dep":
+                raw = _f.get("last_port")
+            elif concept == "date_arr" or (concept == "date_mv" and not _dep):
+                raw = _f.get("eta_arrival") or _f.get("eta")
+            else:
+                raw = _f.get("etd_departure")
         if blank(raw):
             mark(cell)
             res.yellow += 1
             res.missing.append(label)
             continue
-        if concept in ("issc_expiry", "w_last_date", "eta"):
+        if concept == "eta_dt":
+            raw = master.fields.get("eta_arrival") or master.fields.get("eta")
+            if hasattr(raw, "hour"):
+                if not C.is_date_format(cell.number_format):
+                    cell.number_format = "dd-mm-yyyy hh:mm"
+                cell.value = raw
+                count += 1
+                continue
+        if concept in ("issc_expiry", "w_last_date", "eta", "date_mv", "date_arr", "date_dep"):
             d = C.to_date(raw)
             if d:
                 if not C.is_date_format(cell.number_format):

@@ -91,6 +91,16 @@ FIELDS = {
     "nt": ["net tonnage", "nt", "nettoraumzahl", "arqueo neto"],
     "ship_type": ["type of ship", "ship type", "vessel type", "type of vessel", "schiffstyp", "tipo de buque"],
     "portnet_no": ["portnet number", "portnet no"],
+    "voyage_no": ["voyage number", "voyage no", "reisenummer", "numero de viaje"],
+    "port_mv": ["port of arrival departure", "port of arrival or departure"],
+    "port_arr": ["port of arrival", "arrival port", "ankunftshafen"],
+    "port_dep": ["port of departure", "departure port", "abfahrtshafen"],
+    "date_mv": ["date of arrival departure", "date of arrival or departure"],
+    "date_arr": ["date of arrival", "arrival date", "ankunftsdatum"],
+    "date_dep": ["date of departure", "departure date", "abfahrtsdatum"],
+    "last_port": ["last port of call", "last port", "letzter anlaufhafen"],
+    "eta_dt": ["expected date and time of arrival", "date and time of arrival", "eta"],
+    "port_registry": ["port of registry", "registry port", "heimathafen"],
     "movement_arrival": ["arrival"],
     "movement_departure": ["departure"],
     # security
@@ -114,9 +124,13 @@ FIELDS = {
 }
 SECURITY_FIELDS = {"issc_valid", "issc_issuer", "issc_issuer_type", "ssp_onboard", "issc_expiry", "cso_given",
                    "cso_family", "cso_phone", "cso_email", "company_name", "ship_config", "cargo_condition", "ballast"}
-HEADER_FIELDS = {"ship_name", "imo", "portnet_no", "movement_arrival", "movement_departure", "flag", "call_sign",
+HEADER_FIELDS = {"eta_dt", "port_registry", "nt", "voyage_no", "port_mv", "port_arr", "port_dep", "date_mv", "date_arr", "date_dep", "last_port", "ship_name", "imo", "portnet_no", "movement_arrival", "movement_departure", "flag", "call_sign",
                  "gt", "master_name", "ship_type"}
-FIELD_EXCLUDE = {"ship_name": {"agent", "master", "owner", "manager", "company", "officer"},
+_PX = {"date", "time", "facility", "expected", "ship", "berth", "agent", "estimated"}
+FIELD_EXCLUDE = {"port_mv": _PX, "port_arr": _PX, "port_dep": _PX, "last_port": {"facility", "date", "time", "delivery"},
+                 "date_mv": {"time", "port"}, "date_arr": {"time", "port"}, "date_dep": {"time", "port"},
+                 "voyage_no": {"particulars"},
+                 "ship_name": {"agent", "master", "owner", "manager", "company", "officer"},
                  "flag": {"agent"}}
 WASTE_HEADER_FIELDS = {"w_last_port", "w_last_date", "w_next_port_hdr"}
 # Concepts that the program knows about but where it is not clear how the form wants them: left empty + yellow.

@@ -11,6 +11,15 @@ STOP = re.compile(r"signature|date and sig|^\s*\d+\.\s*date", re.I)
 NUMLABEL = re.compile(r"^\s*\d{1,2}(\.\d{1,2})?\.?\s+\S")
 
 HEADER = [
+    ("loc_arr", r"^un ?locode of arrival"),
+    ("loc_dep", r"^un ?locode of departure"),
+    ("date_arr", r"^date of arrival$"),
+    ("date_dep", r"^date of departure$"),
+    ("time_arr", r"^time of arrival"),
+    ("time_dep", r"^time of departure"),
+    ("last_poc", r"^last port of call"),
+    ("next_poc", r"^next port of call"),
+    ("stay", r"^period of stay"),
     ("ship_name", r"^name of ship|^name des schiffes|^nombre del buque"),
     ("imo", r"^imo number|^imo no|^imo nummer"),
     ("call_sign", r"^call sign|^rufzeichen|^indicativo"),
@@ -191,6 +200,11 @@ def fill_header(ctx, ws, res, upto_row):
             "voyage_no": f.get("voyage_no"), "port": f.get("port"), "date": date, "flag": f.get("flag"),
             "lastnext": (f"{f.get('last_port')} / {f.get('next_port')}" if f.get("last_port") or f.get("next_port") else None),
             "from_dest": (f.get("next_port") if dep else f.get("last_port")),
+            "loc_arr": f.get("port_locode"),
+            "loc_dep": (f.get("last_port_locode") if not dep else f.get("port_locode")),
+            "date_arr": f.get("eta_arrival") or f.get("eta"), "date_dep": f.get("etd_departure"),
+            "time_arr": f.get("eta_arrival") or f.get("eta"), "time_dep": f.get("etd_departure"),
+            "stay": f.get("period_of_stay"),
             "persons": (len(master.crew) + len(master.pax)) if master.crew else None}
     import convert as C
     count = 0
@@ -209,21 +223,43 @@ def fill_header(ctx, ws, res, upto_row):
             below = anchor(ws, r1 + 1, c0)
             right = anchor(ws, r0, c1 + 1) if c1 + 1 <= ws.max_column else None
             def labelish(x):
-                return x is not None and isinstance(x.value, str) and bool(NUMLABEL.match(x.value))
+                if x is None or not isinstance(x.value, str):
+                    return False
+                if NUMLABEL.match(x.value):
+                    return True
+                if x.value.startswith("="):
+                    return False
+                t = re.sub(r"\s+", " ", x.value).strip().lower()
+                t = re.sub(r"^\d+\.?\d*\.?\s*", "", t)
+                if x.row >= upto_row:
+                    return True
+                if any(re.search(rx, t) for _k, rx in HEADER) or t.endswith(":"):
+                    return True
+                if re.search(r"\b(name of|date of|time of|locode|number of|period of|port of|call sign|flag state|voyage|imo)\b", t):
+                    return True
+                return x.value.strip().isupper() and len(x.value.split()) >= 2
             tgt = None
             for cand in (below, right):
                 if cand is not None and not labelish(cand) and (not _blank(cand.value) or has_border(cand)):
                     tgt = cand
                     break
             if tgt is None:
-                tgt = below if not labelish(below) else None
+                for cand in (right, below):
+                    if cand is not None and not labelish(cand) and cand.row < upto_row:
+                        tgt = cand
+                        break
             if tgt is None:
                 continue
             val = vals.get(key)
+            if key in ("last_poc", "next_poc"):
+                loc = "locode" in lab
+                val = f.get(key[:4] + "_port" + ("_locode" if loc else ""))
+            if key in ("time_arr", "time_dep"):
+                val = val.strftime("%H:%M:%S") if hasattr(val, "hour") else None
             if _blank(val):
                 mark(tgt); res.yellow += 1; res.missing.append(v.strip()[:40])
                 continue
-            if key == "date":
+            if key in ("date", "date_arr", "date_dep"):
                 d = C.to_date(val)
                 if d:
                     if not C.is_date_format(tgt.number_format):
