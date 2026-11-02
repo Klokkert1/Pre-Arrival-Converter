@@ -53,6 +53,7 @@ class Master:
                 elif isinstance(label, str) and sheet == "Health" and label.startswith("Q") and val not in (None, ""):
                     self.fields["health_" + label.split(" ")[0].lower()] = val
         self.crew = self._table("Crew_List", PERSON, key="family_name")
+        self._crew_documents()
         self.pax = self._table("Passengers", PERSON, key="family_name")
         self.ports = self._table("Last_10_Ports", PORTS, key="port", header_row=5, first=6, last=15)
         self.stores = self._stores()
@@ -77,6 +78,43 @@ class Master:
             rec = {k: v for k, v in rec.items() if v not in (None, "")}
             rows.append(rec)
         return rows
+
+    def _crew_documents(self):
+        """New master: passport and seaman's book in separate columns. Forms that ask for ONE identity document
+        get the passport (or the seaman's book when there is no passport); both stay available as pp_* / sb_*."""
+        if "Crew_List" not in self.wb.sheetnames:
+            return
+        ws = self.wb["Crew_List"]
+        cols = {}
+        for c in range(1, ws.max_column + 1):
+            h = str(ws.cell(5, c).value or "").strip().lower()
+            for pre, tag in (("passport", "pp"), ("seaman", "sb")):
+                if h.startswith(pre):
+                    kind = "no" if h.endswith(" no.") else "state" if "state" in h else "exp" if "expiry" in h else None
+                    if kind:
+                        cols[c] = f"{tag}_{kind}"
+        if not cols:
+            return
+        recs = iter(self.crew)
+        for r in range(6, ws.max_row + 1):
+            if ws.cell(r, 2).value in (None, ""):
+                continue
+            rec = next(recs, None)
+            if rec is None:
+                break
+            for k in ("id_type", "id_number", "id_issue_country", "id_expiry"):
+                rec.pop(k, None)
+            for c, k in cols.items():
+                v = ws.cell(r, c).value
+                if v not in (None, ""):
+                    rec[k] = v
+            for tag, name in (("pp", "Passport"), ("sb", "Seaman's book")):
+                if rec.get(tag + "_no"):
+                    rec.update({"id_type": name, "id_number": rec[tag + "_no"],
+                                "id_issue_country": rec.get(tag + "_state"), "id_expiry": rec.get(tag + "_exp")})
+                    for k in [k for k, v in rec.items() if v is None]:
+                        del rec[k]
+                    break
 
     def _stores(self):
         if "Ship_Stores" not in self.wb.sheetnames:
