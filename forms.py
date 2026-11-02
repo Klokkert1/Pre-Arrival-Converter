@@ -9,6 +9,7 @@ from matching import match, norm, compact, hint_text
 import vocabulary as V
 import convert as C
 import health as H
+import stores as ST
 
 YELLOW = PatternFill("solid", fgColor="FFFF00")
 DATE_CONCEPTS = {"dob", "id_issue_date", "id_expiry", "date_emb", "date_disemb", "arrival", "departure"}
@@ -708,6 +709,11 @@ def process_sheet(ctx, ws):
         n = fill_stores(ctx, ws, res)
         fields = fill_fields(ctx, ws, res, V.HEADER_FIELDS, exclude)
         res.lines.append(f"{n or 0} article {'line' if n == 1 else 'lines'} filled")
+        return res
+    # 1b) article list with printed article names (FAL 3 / provisions)
+    art_cols = ST.find_article_table(ws)
+    if art_cols and not is_mdoh:
+        ST.fill_stores_sheet(ctx, ws, res, art_cols)
         return res
     # 2) tables
     cand = []
