@@ -32,6 +32,9 @@ LABEL_TO_ID = {
     "Terminal / berth": "berth", "ISSC certificate number": "issc_number", "ISSC date of issue": "issc_issued",
     "Sanitation control: certificate or exemption": "san_type", "Sanitation certificate / exemption issued at": "san_place",
     "Sanitation certificate / exemption dated": "san_date", "Re-inspection required?": "reinspection",
+    "Deadweight (DWT, tonnes)": "dwt", "Length overall (LOA, m)": "length", "Beam (m)": "breadth",
+    "Draught forward (m)": "draft_fore", "Draught aft (m)": "draft_aft", "MMSI": "mmsi",
+    "Ship e-mail": "ship_email", "Ship phone / satcom": "ship_phone", "Owner / manager": "owner",
     "Passengers": "nil_passengers", "Animals": "nil_animals", "Arms and ammunition": "nil_arms",
     "Stowaways": "nil_stowaways",
 }

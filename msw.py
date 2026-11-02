@@ -59,7 +59,7 @@ def LABELS(m):
         (r"^(dead ?weight|dwt)", g("dwt"), None), (r"^vessel length|^length", g("length"), None),
         (r"^vessel width|^breadth|^width", g("breadth"), None), (r"^vessel moulded depth|^depth", g("depth"), None),
         (r"^draft fore|^draught fore", g("draft_fore"), None), (r"^draft aft|^draught aft", g("draft_aft"), None),
-        (r"^draught level max", g("draft_max"), None), (r"^engine power", g("engine_power"), None),
+        (r"^draught level max", (max(g("draft_fore") or 0, g("draft_aft") or 0) or None), None), (r"^engine power", g("engine_power"), None),
         (r"^valid issc", g("issc_valid"), None), (r"^issc issuer$", g("issc_issuer"), None),
         (r"^issc type", g("issc_issuer_type"), None), (r"^expiry date", _d(g("issc_expiry")), None),
         (r"^issc document number", g("issc_number"), None), (r"^issc issuing date", _d(g("issc_issued")), None),
