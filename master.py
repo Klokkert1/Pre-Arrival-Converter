@@ -16,6 +16,24 @@ LABEL_TO_ID = {
     "CSO family name": "cso_family", "CSO phone 24/7": "cso_phone", "CSO e-mail": "cso_email",
     "Company name": "company_name", "Company IMO number": "company_imo", "Ship configuration": "ship_config",
     "Condition of cargo tanks": "cargo_condition", "Ballast tanks": "ballast",
+    # added from the company's own forms
+    "Official number": "official_no", "Port of registry": "port_registry", "Inmarsat call numbers": "inmarsat",
+    "UN/LOCODE of port of arrival/departure": "port_locode", "Date and time of arrival (ETA / ATA)": "eta_arrival",
+    "Date and time of departure (ETD / ATD)": "etd_departure", "Period of stay": "period_of_stay",
+    "UN/LOCODE of last port of call": "last_port_locode", "UN/LOCODE of next port of call": "next_port_locode",
+    "Port facility of arrival (if known)": "port_facility", "Primary purpose of call": "call_purpose",
+    "Security level the ship is currently operating at": "ship_sec_level",
+    "Location of ship at time of report": "ship_location",
+    "Dangerous substances as cargo (ISPS classes)?": "dg_cargo",
+    "Security procedures maintained during ship-to-ship activities?": "sts_procedures",
+    "Security-related matter to report?": "sec_matter", "Details of security-related matter": "sec_matter_details",
+    "Title or position of person providing the information": "reporter_title",
+    "Date / time / place of completion of report": "report_completed",
+    "Terminal / berth": "berth", "ISSC certificate number": "issc_number", "ISSC date of issue": "issc_issued",
+    "Sanitation control: certificate or exemption": "san_type", "Sanitation certificate / exemption issued at": "san_place",
+    "Sanitation certificate / exemption dated": "san_date", "Re-inspection required?": "reinspection",
+    "Passengers": "nil_passengers", "Animals": "nil_animals", "Arms and ammunition": "nil_arms",
+    "Stowaways": "nil_stowaways",
 }
 
 class Master:
@@ -24,7 +42,7 @@ class Master:
         wb = load_workbook(path, data_only=True)
         self.wb = wb
         self.fields = {}
-        for sheet in ("Ship", "Voyage", "Security"):
+        for sheet in ("Ship", "Voyage", "Security", "Health", "Nil_List"):
             if sheet not in wb.sheetnames:
                 continue
             ws = wb[sheet]
@@ -32,6 +50,8 @@ class Master:
                 label, val = ws.cell(r, 2).value, ws.cell(r, 3).value
                 if label in LABEL_TO_ID and val not in (None, ""):
                     self.fields[LABEL_TO_ID[label]] = val
+                elif isinstance(label, str) and sheet == "Health" and label.startswith("Q") and val not in (None, ""):
+                    self.fields["health_" + label.split(" ")[0].lower()] = val
         self.crew = self._table("Crew_List", PERSON, key="family_name")
         self.pax = self._table("Passengers", PERSON, key="family_name")
         self.ports = self._table("Last_10_Ports", PORTS, key="port", header_row=5, first=6, last=15)
