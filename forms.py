@@ -1001,4 +1001,17 @@ def process_workbook(master, path, out_dir):
     out_path = os.path.join(out_dir, os.path.basename(path))
     os.makedirs(out_dir, exist_ok=True)
     wb.save(out_path)
-    return out_path, results, package_notes(path)
+    notes = package_notes(path)
+    try:
+        _mn = re.sub(r"\W+", " ", str(master.fields.get("master_name") or "")).lower().split()
+        _mn = [w for w in _mn if w not in ("capt", "captain", "master", "kapitan")]
+        for _p in master.crew:
+            if re.search(r"master|captain|kapit", str(_p.get("rank") or ""), re.I):
+                _cn = re.sub(r"\W+", " ", f"{_p.get('given_names') or ''} {_p.get('family_name') or ''}").lower().split()
+                if _mn and _cn and not (set(_cn) <= set(_mn) or set(_mn) <= set(_cn)):
+                    notes.append(f"Check your master: 'Name of master' in sheet Ship is '{master.fields.get('master_name')}', "
+                                 f"but the Crew_List has '{_p.get('given_names')} {_p.get('family_name')}' as Master.")
+                break
+    except Exception:
+        pass
+    return out_path, results, notes
