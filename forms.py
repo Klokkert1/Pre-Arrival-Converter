@@ -10,6 +10,7 @@ import vocabulary as V
 import convert as C
 import health as H
 import stores as ST
+import waste2 as W2
 
 YELLOW = PatternFill("solid", fgColor="FFFF00")
 DATE_CONCEPTS = {"dob", "id_issue_date", "id_expiry", "date_emb", "date_disemb", "arrival", "departure"}
@@ -729,9 +730,12 @@ def process_sheet(ctx, ws):
         chosen.append((kind, t))
         seen.update(t.rows)
     tables = [(k, t) for k, t in chosen if (k != "person" or len(set(t.cols.values())) >= PERSON_MIN)]
+    is_waste2 = (not is_mdoh) and not any(k == "waste" for k, _ in tables) and W2.is_waste_sheet(ws)
     if is_mdoh:
         tables = [(k, t) for k, t in tables if k == "ports"]
         ctx["has_ports_table"] = bool(tables)
+    if is_waste2 and W2.fill_waste_sheet(ctx, ws, res):
+        return res
     for kind, t in tables:
         for r in t.rows:
             for c in range(1, ws.max_column + 1):
