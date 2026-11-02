@@ -51,8 +51,8 @@ PERSON = {
 PORTS = {
     "serial": ["no", "nr", "number"],
     "port": ["port", "port or un locode", "port locode", "port name", "port of call", "hafen", "puerto"],
-    "locode": ["un locode", "locode", "unlocode"],
-    "country": ["country", "land", "pais"],
+    "locode": ["un locode", "locode", "unlocode", "locode of port"],
+    "country": ["country", "country where port is located", "land", "pais"],
     "arrival": ["date of arrival", "arrival date", "ata", "date from", "ankunft", "fecha de llegada", "llegada"],
     "departure": ["date of departure", "departure date", "atd", "date to", "abfahrt", "fecha de salida", "salida"],
     "facility": ["port facility", "facility gisis", "port facility no", "hafenanlage", "instalacion portuaria"],

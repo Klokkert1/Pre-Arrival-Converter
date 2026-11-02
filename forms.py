@@ -18,6 +18,8 @@ import poc as POC
 import nmsw as NM
 import shipdetails as SD
 import cers3 as CE
+import dakosy as DK
+import noad as NA
 
 # openpyxl recomputes max_row / max_column over ALL cells at every call; on big templates (5000 empty
 # formatted rows) the program called them thousands of times. They are cached per sheet and reset when rows are added.
@@ -174,7 +176,7 @@ class Table:
 
 def detect_tables(ws, vocab, min_hits=3):
     hits = {}
-    for r in range(1, min(ws.max_row, 40) + 1):
+    for r in range(1, min(ws.max_row, 75) + 1):
         m = {}
         for c in range(1, min(ws.max_column, 40) + 1):
             v = ws.cell(r, c).value
@@ -821,6 +823,35 @@ def process_sheet(ctx, ws):
         for (_r, _c), _cell in list(ws._cells.items()):
             if isinstance(_cell.value, str) and not _cell.value.startswith("=") and _rx.search(_cell.value):
                 _cell.value = _rx.sub(lambda mm: mm.group(1) + re.sub(r"^\s*m\.?\s?v\.?\s+", "", str(_name), flags=re.I), _cell.value)
+    if DK.is_dakosy(ctx["wb"]) and ws.title.lower() not in ("instructions", "f1", "f2"):
+        t_ = ws.title.lower()
+        if t_ == "waste delivery receipt":
+            res.note("Waste delivery receipt is completed after the port call; left untouched.")
+            return res
+        if t_ in ("main", "ship", "port message", "traffic message on arrival", "traffic message on departure",
+                  "security", "health", "waste", "stowaways"):
+            DK.fill_dakosy(ctx, ws, res)
+            if t_ == "waste":
+                tb = {"row": 17, "cols": {5: "w_deliver", 6: "w_capacity", 7: "w_onboard", 8: "w_next_port",
+                                          9: "w_generated"}, "label": 2, "alt": 2}
+                _h = ctx["master"].waste["header"]
+                _old = _h.get("w_next_port")
+                if ctx["master"].fields.get("next_port_locode"):
+                    _h["w_next_port"] = ctx["master"].fields["next_port_locode"]      # DAKOSY wants the LOCODE
+                try:
+                    W2.fill_table(ctx, ws, res, tb, keep_unmatched=True)
+                finally:
+                    _h["w_next_port"] = _old
+                res.kind = "DAKOSY waste"
+                return res
+            if t_ in ("main", "ship", "port message", "traffic message on arrival", "traffic message on departure", "health", "stowaways"):
+                return res
+            exclude |= {(_r, _c) for _r in range(1, 28) for _c in range(1, 12)}
+    if NA.is_noad(ctx["wb"]) and re.match(r"^[1-5]\. ", ws.title):
+        NA.fill_noad(ctx, ws, res)
+        if not ws.title.startswith("1."):
+            return res
+        exclude |= {(_r, _c) for _r in range(1, 51) for _c in range(1, 18)}
     _cers = CE.is_cers(ctx["wb"]) and ws.title.lower() in ("vessel", "voyage", "waste", "security")
     if _cers:
         CE.fill_cers(ctx, ws, res)
