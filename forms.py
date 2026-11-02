@@ -12,6 +12,30 @@ import health as H
 import stores as ST
 import waste2 as W2
 
+# openpyxl recomputes max_row / max_column over ALL cells at every call; on big templates (5000 empty
+# formatted rows) the program called them thousands of times. They are cached per sheet and reset when rows are added.
+from openpyxl.worksheet.worksheet import Worksheet as _WS
+
+def _cached_dim(name):
+    orig = getattr(_WS, name).fget
+    def getter(self):
+        hit = self.__dict__.get("_pf_" + name)
+        if hit is not None:
+            return hit
+        val = orig(self)
+        self.__dict__["_pf_" + name] = val
+        return val
+    return property(getter)
+
+if not getattr(_WS, "_pf_patched", False):
+    _WS.max_row = _cached_dim("max_row")
+    _WS.max_column = _cached_dim("max_column")
+    _WS._pf_patched = True
+
+def reset_dims(ws):
+    ws.__dict__.pop("_pf_max_row", None)
+    ws.__dict__.pop("_pf_max_column", None)
+
 YELLOW = PatternFill("solid", fgColor="FFFF00")
 DATE_CONCEPTS = {"dob", "id_issue_date", "id_expiry", "date_emb", "date_disemb", "arrival", "departure"}
 COUNTRY_CONCEPTS = {"nationality", "id_issue_country", "country"}
@@ -242,6 +266,7 @@ def shift_rows_down(ws, after_row, n):
         ws.unmerge_cells(str(m))
     last_col = ws.max_column
     ws.move_range(f"A{after_row + 1}:{L(last_col)}{ws.max_row}", rows=n, translate=False)
+    reset_dims(ws)
     for row in ws.iter_rows():
         for cell in row:
             if is_formula(cell.value):
@@ -691,6 +716,7 @@ def fill_stores(ctx, ws, res):
 PERSON_MIN = 4
 
 def process_sheet(ctx, ws):
+    reset_dims(ws)
     res = SheetResult(ws.title)
     if re.search(r"instruction|reference|unlocode|locode|notice|conditions|taul|^list$", ws.title, re.I):
         res.note("Information sheet; left untouched.")
@@ -701,8 +727,8 @@ def process_sheet(ctx, ws):
     title_text = norm(ws.title + " " + " ".join(str(ws.cell(r, c).value) for r in range(1, 9)
                                                 for c in range(1, 6) if ws.cell(r, c).value))
     # 1) ship's stores
-    n_art = sum(1 for r in range(1, ws.max_row + 1) if isinstance(ws.cell(r, 1).value, str)
-                and re.match(r"^\s*\d{3}\s*-\s*\S", ws.cell(r, 1).value))
+    n_art = sum(1 for (r, c), cell in list(ws._cells.items())
+                if c == 1 and isinstance(cell.value, str) and re.match(r"^\s*\d{3}\s*-\s*\S", cell.value))
     has_qty = any(norm(ws.cell(r, c).value or "") in ("quantity", "menge", "cantidad")
                   for r in range(1, 12) for c in range(1, 12))
     if n_art >= 4 and has_qty:
