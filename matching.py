@@ -15,7 +15,8 @@ def compact(text):
 def variants(label):
     s = str(label)
     no_paren = re.sub(r"\([^)]*\)", " ", s)
-    return [v for v in {norm(no_paren), norm(s)} if v]
+    nonum = re.sub(r"^\s*\d+(\.\d+)*\.?\s+(?=\D)", "", no_paren)
+    return [v for v in {norm(no_paren), norm(s), norm(nonum)} if v]
 
 def hint_text(label):
     """Text in parentheses, e.g. '(yyyy-mm-dd)' or '(M, F)'."""

@@ -386,6 +386,13 @@ def doc_rows(ws, t, records):
                 and not blank(ws.cell(row - 1, pcols[0]).value):
             cont = True
             break
+    scol = [c for c, k in t.cols.items() if k == "serial"]
+    if not cont and scol and dcols:      # blank form: numbers printed on every second line, document codes (P / SB) printed
+        r0 = t.data_start
+        if not blank(ws.cell(r0, scol[0]).value) and blank(ws.cell(r0 + 1, scol[0]).value) \
+                and not blank(ws.cell(r0 + 2, scol[0]).value) \
+                and all(not blank(ws.cell(r0 + k, dcols[0]).value) for k in range(4)):
+            cont = True
     if not cont:
         return records, False
     out = []
@@ -408,8 +415,10 @@ def fill_table(ctx, ws, t, records, res):
     if not records:
         return 0
     n_people = len(records)
+    ctx["pair_mode"] = False
     if t.cols and "id_number" in t.cols.values() and ctx.get("crew_recs") is records:
         records, paired = doc_rows(ws, t, records)
+        ctx["pair_mode"] = paired
         if paired:
             res.note("Passport and seaman's book are entered on two lines per person, as this form shows.")
     # skip tables that are driven by formulas
@@ -440,6 +449,8 @@ def fill_table(ctx, ws, t, records, res):
                 continue
             rule = rule_for(ctx, t.texts.get(c, []))
             mand = c in t.mandatory or bool(re.search(r"is mandatory\.", rule, re.I))
+            if concept == "id_type" and ctx.get("pair_mode") and not blank(cell.value) and not is_formula(cell.value):
+                continue          # document code (P / SB) already printed on the form
             val, status = convert_cell(ctx, ws, cell, concept, rec, t.hints.get(c, ""), mand, rule)
             if cont and status in ("blank", "missing"):
                 if not blank(cell.value) and not is_formula(cell.value):
