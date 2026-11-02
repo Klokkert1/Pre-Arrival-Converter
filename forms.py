@@ -991,7 +991,13 @@ def process_workbook(master, path, out_dir):
     for ws in wb.worksheets:
         if ws.sheet_state != "visible":
             continue
-        results.append(process_sheet(ctx, ws))
+        _r = process_sheet(ctx, ws)
+        try:
+            import extras as EX
+            EX.post(ctx, ws, _r)
+        except Exception as _e:
+            _r.note(f'extra header step skipped: {_e!r}'[:120])
+        results.append(_r)
     out_path = os.path.join(out_dir, os.path.basename(path))
     os.makedirs(out_dir, exist_ok=True)
     wb.save(out_path)
