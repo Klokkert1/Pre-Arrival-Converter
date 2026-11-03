@@ -1,0 +1,67 @@
+# Eesti - CHECK (lower confidence): please have an Estonian speaker check
+[person]
+serial = nr, jrk nr, number
+family_name = perekonnanimi, perenimi
+given_names = eesnimi, eesnimed
+rank = amet, auaste, amet voi auaste
+nationality = kodakondsus, rahvus
+dob = sunniaeg, syniaeg
+pob = sunnikoht
+gender = sugu
+id_type = isikut toendava dokumendi liik, dokumendi liik
+id_number = isikut toendava dokumendi number, passi number, dokumendi number
+id_issue_date = valjaandmise kuupaev
+id_expiry = kehtivuse lopp, kehtib kuni, aegumiskuupaev
+id_issue_country = valjaandnud riik
+remarks = markused, markus
+[ports]
+port = sadam, sadama nimi
+locode = un locode, locode
+country = riik
+arrival = saabumise kuupaev, saabumine
+departure = valjumise kuupaev, valjumine
+sec_level = turvatase, kaitsetase
+next_port = jargmine sadam
+[waste]
+w_type = jaatmete liik, jaatmete tuup
+w_deliver = tapselt üleandmisele, uleandmisele, üleantav kogus, uleantav kogus
+w_capacity = hoiustamismaht, maksimaalne hoiustamismaht
+w_onboard = laeval, laeval hoitav
+w_generated = prognoositav kogus, hinnanguline kogus
+w_next_port = jargmine ule andmise sadam
+w_remarks = markused
+[fields]
+ship_name = laeva nimi
+imo = imo number, imo nr
+call_sign = kutsung, kutsungisignaal, kutsemark
+flag = lipp, lipuriik
+master_name = kapten, kapteni nimi
+gt = brutoregistertonnaaz, brutotonnaaz
+nt = netoregistertonnaaz, netotonnaaz
+ship_type = laeva tuup, laeva liik
+voyage_no = reisi number, reisi nr
+port_arr = saabumissadam
+port_dep = valjumissadam
+date_arr = saabumise kuupaev
+date_dep = valjumise kuupaev
+last_port = viimane sadam, eelmine sadam, viimane külastatud sadam
+eta_dt = eeldatav saabumisaeg, eta
+port_registry = registreerimissadam, kodusadam
+movement_arrival = saabumine
+movement_departure = valjumine
+company_name = laevaomanik, ettevote nimi
+[store_classes]
+spirits = kanged alkohoolsed joogid, viski, viin, rumm
+beer = olu
+wine = vein
+cigarettes = sigaretid
+tobacco = tubakas
+meat = liha
+coffee = kohv
+fresh_water = joogivesi, magevesi
+paint = varv
+[stores]
+article = kauba nimetus, kaup, kaubad, nimetus
+quantity = kogus, arv
+unit = uhik
+location = asukoht laeval, hoiukoht

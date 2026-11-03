@@ -164,3 +164,60 @@ STORE_CLASSES = [
     ("line_thrower", ["line thrower", "line throwing", "rocket line"]),
     ("provisions", ["provisions", "provision", "food stores", "proviant", "provisiones"]),
 ]
+
+
+# ---------- Extra word lists (one text file per language, see the folder 'words') ----------
+def _load_words():
+    """Add the synonyms from words/*.txt (bundled) and from ~/.portfill/words/*.txt (your own additions).
+    File format:  [section] on its own line, then   concept = word one, word two, ...   (# starts a comment)."""
+    import os, sys, glob
+    from matching import norm
+    here = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    home = os.environ.get("PORTFILL_HOME") or os.path.join(os.path.expanduser("~"), ".portfill")
+    files = sorted(glob.glob(os.path.join(here, "words", "*.txt"))) + sorted(glob.glob(os.path.join(home, "words", "*.txt")))
+    targets = {"person": PERSON, "ports": PORTS, "waste": WASTE, "fields": FIELDS}
+    extra_stores = {"article": [], "quantity": [], "unit": [], "location": []}
+    store_cls = dict(STORE_CLASSES_MAP)
+    problems = []
+    for fn in files:
+        section = None
+        try:
+            lines = open(fn, encoding="utf-8-sig").read().splitlines()
+        except OSError:
+            continue
+        for n, line in enumerate(lines, 1):
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            if line.startswith("[") and line.endswith("]"):
+                section = line[1:-1].strip().lower()
+                continue
+            if "=" not in line or section is None:
+                problems.append(f"{os.path.basename(fn)} line {n}: not understood")
+                continue
+            key, _, vals = line.partition("=")
+            key = key.strip().lower()
+            words = [norm(w) for w in vals.split(",") if norm(w)]
+            if section in targets:
+                if key not in targets[section]:
+                    problems.append(f"{os.path.basename(fn)} line {n}: unknown field '{key}' in [{section}]")
+                    continue
+                for w in words:
+                    if w not in targets[section][key]:
+                        targets[section][key].append(w)
+            elif section == "store_classes":
+                if key not in store_cls:
+                    problems.append(f"{os.path.basename(fn)} line {n}: unknown article class '{key}'")
+                    continue
+                for w in words:
+                    if w not in store_cls[key]:
+                        store_cls[key].append(w)
+            elif section == "stores" and key in extra_stores:
+                extra_stores[key] += [w for w in words if w not in extra_stores[key]]
+            else:
+                problems.append(f"{os.path.basename(fn)} line {n}: unknown section/field")
+    return extra_stores, problems
+
+
+STORE_CLASSES_MAP = {name: kws for name, kws in STORE_CLASSES}
+EXTRA_STORES, WORD_PROBLEMS = _load_words()

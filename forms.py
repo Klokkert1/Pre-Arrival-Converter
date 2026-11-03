@@ -749,6 +749,14 @@ UNIT_FAMILY = {
     "kg": ("mass", 1), "kgs": ("mass", 1), "kilo": ("mass", 1), "kilos": ("mass", 1), "kilogram": ("mass", 1),
     "t": ("mass", 1000), "mt": ("mass", 1000), "tonnes": ("mass", 1000), "tons": ("mass", 1000),
     "pcs": ("count", 1), "pc": ("count", 1), "pieces": ("count", 1), "piece": ("count", 1), "sticks": ("count", 1),
+    # other languages
+    "liter": ("volume", 1), "litros": ("volume", 1), "litro": ("volume", 1), "litri": ("volume", 1), "litro": ("volume", 1),
+    "litr": ("volume", 1), "litry": ("volume", 1), "litrov": ("volume", 1), "liters": ("volume", 1), "l": ("volume", 1),
+    "kilo": ("mass", 1), "kilos": ("mass", 1), "kilogramm": ("mass", 1), "kilogramos": ("mass", 1), "kilogrammes": ("mass", 1),
+    "tonne": ("mass", 1000), "tonnen": ("mass", 1000), "toneladas": ("mass", 1000), "tonnellate": ("mass", 1000),
+    "stuks": ("count", 1), "stuk": ("count", 1), "stk": ("count", 1), "stck": ("count", 1), "stuck": ("count", 1),
+    "pieces": ("count", 1), "pieza": ("count", 1), "piezas": ("count", 1), "pezzi": ("count", 1), "pecas": ("count", 1),
+    "unidades": ("count", 1), "unites": ("count", 1), "nr": ("count", 1), "szt": ("count", 1), "kpl": ("count", 1),
 }
 
 def fill_stores(ctx, ws, res):
@@ -992,6 +1000,11 @@ def process_workbook(master, path, out_dir):
     wb = load_workbook(path)
     ctx = {"master": master, "wb": wb, "rules": parse_instructions(wb), "path": path}
     results = []
+    try:
+        import extras as _EXS
+        _labels = _EXS.snapshot_labels(wb)
+    except Exception:
+        _EXS, _labels = None, {}
     for ws in wb.worksheets:
         if ws.sheet_state != "visible":
             continue
@@ -1001,6 +1014,11 @@ def process_workbook(master, path, out_dir):
             EX.post(ctx, ws, _r)
         except Exception as _e:
             _r.note(f'extra header step skipped: {_e!r}'[:120])
+        try:
+            if _EXS and _r.kind and "not recognised" not in str(_r.kind):
+                _EXS.report_unfilled(ws, _r, _labels.get(ws.title, {}))
+        except Exception:
+            pass
         results.append(_r)
     out_path = os.path.join(out_dir, os.path.basename(path))
     os.makedirs(out_dir, exist_ok=True)

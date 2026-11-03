@@ -8,6 +8,16 @@ QTY = ("quantity", "qty", "menge", "cantidad", "quantity kg ltr")
 UNIT = ("unit", "units", "einheit", "unidad")
 LOC = r"location on board|place of storage|location|lagerort|ubicacion|stowage"
 STOP = re.compile(r"signature|date and sig|^\s*\d+\.\s*date", re.I)
+
+# words from the language files (words/*.txt)
+import vocabulary as _V
+_X = _V.EXTRA_STORES
+if _X["article"]:
+    ART = ART.replace(r"|description of", "|" + "|".join(re.escape(w) for w in _X["article"]) + r"|description of", 1)
+QTY = QTY + tuple(_X["quantity"])
+UNIT = UNIT + tuple(_X["unit"])
+if _X["location"]:
+    LOC = LOC + "|" + "|".join(re.escape(w) for w in _X["location"])
 NUMLABEL = re.compile(r"^\s*\d{1,2}(\.\d{1,2})?\.?\s+\S")
 
 HEADER = [

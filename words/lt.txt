@@ -1,0 +1,67 @@
+# Lietuviu - CHECK (lower confidence): please have a Lithuanian speaker check
+[person]
+serial = nr, eil nr, numeris
+family_name = pavarde
+given_names = vardas, vardai
+rank = pareigos, laipsnis, pareigos ar laipsnis
+nationality = pilietybe, tautybe
+dob = gimimo data
+pob = gimimo vieta
+gender = lytis
+id_type = tapatybe patvirtinancio dokumento rusis, dokumento rusis
+id_number = tapatybe patvirtinancio dokumento numeris, paso numeris, dokumento numeris
+id_issue_date = isdavimo data
+id_expiry = galiojimo pabaigos data, galioja iki, galiojimo laikas
+id_issue_country = isdavusi valstybe, isdavimo salis
+remarks = pastabos, pastaba
+[ports]
+port = uostas, uosto pavadinimas
+locode = un locode, locode
+country = salis, valstybe
+arrival = atvykimo data, atvykimas
+departure = isvykimo data, isvykimas
+sec_level = apsaugos lygis, saugumo lygis
+next_port = kitas uostas
+[waste]
+w_type = atlieku rusis, atlieku tipas
+w_deliver = perduoti, perduotinas kiekis
+w_capacity = saugojimo talpa, didziausia saugojimo talpa
+w_onboard = laive, laive paliekama
+w_generated = numatomas kiekis, apytikris kiekis
+w_next_port = kitas atlieku perdavimo uostas
+w_remarks = pastabos
+[fields]
+ship_name = laivo pavadinimas, laivo vardas
+imo = imo numeris
+call_sign = šaukinys, sauksinys, šaukimo signalas
+flag = vėliava, veliava, vėliavos valstybė, veliavos valstybe
+master_name = kapitonas, kapitono vardas, kapitono vardas pavarde
+gt = bendroji talpa, bruto talpa
+nt = grynoji talpa, neto talpa
+ship_type = laivo tipas, laivo rusis
+voyage_no = reiso numeris
+port_arr = atvykimo uostas
+port_dep = isvykimo uostas
+date_arr = atvykimo data
+date_dep = isvykimo data
+last_port = paskutinis uostas, ankstesnis uostas, paskutinis uostas kuriame lankesi
+eta_dt = numatomas atvykimo laikas, eta
+port_registry = registracijos uostas, registro uostas
+movement_arrival = atvykimas
+movement_departure = isvykimas
+company_name = laivu savininkas, kompanijos pavadinimas
+[store_classes]
+spirits = stiprus alkoholiniai gerimai, viskis, degtine, romas
+beer = alus
+wine = vynas
+cigarettes = cigaretes
+tobacco = tabakas
+meat = mesa
+coffee = kava
+fresh_water = gelo vanduo, geriamas vanduo
+paint = dazai
+[stores]
+article = prekes pavadinimas, preke, prekes, pavadinimas
+quantity = kiekis, skaicius
+unit = matavimo vienetas, vienetas
+location = buvimo vieta laive, saugojimo vieta

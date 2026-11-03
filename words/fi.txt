@@ -1,0 +1,69 @@
+# Suomi - CHECK (matalampi varmuus / lower confidence): please have a Finnish speaker check
+[person]
+serial = nro, jarj nro, numero
+family_name = sukunimi
+given_names = etunimi, etunimet
+rank = arvo, tehtava, asema, virka asema
+nationality = kansalaisuus
+dob = syntymaaika
+pob = syntymapaikka
+gender = sukupuoli
+id_type = henkilollisyystodistuksen laji, asiakirjan laji
+id_number = henkilollisyystodistuksen numero, passin numero, asiakirjan numero
+id_issue_date = myontamispaiva, antopaiva
+id_expiry = voimassaolo paattyy, voimassa asti, vanhenemispaiva
+id_issue_country = myontajavaltio, myontamismaa
+remarks = huomautukset, huomautus, lisatiedot
+[ports]
+port = satama, sataman nimi
+locode = un locode, locode
+country = maa
+arrival = saapumispaiva, saapuminen, saapumisaika
+departure = lahtopaiva, lahto, lahtoaika
+sec_level = turvataso, suojaustaso
+next_port = seuraava satama
+[waste]
+w_type = jatteen laji, jatetyyppi, jatelaji
+w_deliver = luovutettava, luovutettava maara
+w_capacity = varastointikapasiteetti, varastointikapasiteetti enintaan
+w_onboard = aluksella, aluksella pidettava
+w_generated = arvioitu maara, odotettavissa
+w_next_port = seuraava luovutussatama
+w_remarks = huomautukset
+[fields]
+ship_name = aluksen nimi, laivan nimi
+imo = imo numero, imo nro
+call_sign = kutsutunnus
+flag = lippu, lippuvaltio
+master_name = paallikko, paallikon nimi
+gt = bruttovetoisuus
+nt = nettovetoisuus
+ship_type = aluksen tyyppi, aluksen laji
+voyage_no = matkan numero, matkanumero
+port_arr = saapumissatama
+port_dep = lahtosatama
+date_arr = saapumispaiva
+date_dep = lahtopaiva
+last_port = edellinen satama, viimeisin satama
+eta_dt = arvioitu saapumisaika, eta
+port_registry = kotisatama, rekisterisatama
+movement_arrival = saapuminen
+movement_departure = lahto
+company_name = varustamo, yhtion nimi
+[store_classes]
+spirits = vahvat alkoholijuomat, viina, viski, vodka, rommi
+beer = olut
+wine = viini
+cigarettes = savukkeet, tupakka savukkeet
+tobacco = tupakka
+meat = liha
+coffee = kahvi
+fresh_water = makea vesi, juomavesi
+paint = maali
+medicines = laakkeet, lääkkeet
+lub_oil = voiteluoljy
+[stores]
+article = tavaran nimi, tarvike, tarvikkeet, nimike
+quantity = maara, lukumaara
+unit = yksikko
+location = sijainti aluksella, sailytyspaikka

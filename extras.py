@@ -128,3 +128,59 @@ def _isps_row(ws, r, f, res):
     if "no" in cols: _put(ws, anchor(ws, r, cols["no"]), f.get("issc_number"), res)
     if "by" in cols: _put(ws, anchor(ws, r, cols["by"]), f.get("issc_issuer"), res)
     if "exp" in cols: _put(ws, anchor(ws, r, cols["exp"]), f.get("issc_expiry"), res, True)
+
+
+# ---------------------------------------------------------------- report: labels that were not filled
+def snapshot_labels(wb):
+    """Text cells of the form as it came in (these are the form's own labels)."""
+    snap = {}
+    for ws in wb.worksheets:
+        if ws.sheet_state != "visible":
+            continue
+        d = {}
+        for (r, c), cell in list(ws._cells.items()):
+            if r <= 40 and c <= 20 and isinstance(cell.value, str) and 3 <= len(cell.value.strip()) <= 70 \
+                    and not cell.value.startswith("="):
+                d[(r, c)] = cell.value.strip()
+        snap[ws.title] = d
+    return snap
+
+
+def report_unfilled(ws, res, labels):
+    """Empty boxes with a form label on their left that nobody filled and that are not marked yellow."""
+    from forms import has_border, anchor
+    out = []
+    for (r, c), text in sorted(labels.items()):
+        cell = ws.cell(r, c)
+        if isinstance(cell, MergedCell) or cell.value != text:
+            continue
+        right = None
+        try:
+            from forms import span
+            c0, c1, r0, r1 = span(ws, r, c)
+            right = anchor(ws, r0, c1 + 1)
+        except Exception:
+            continue
+        if right is None or isinstance(right, MergedCell):
+            continue
+        if right.value not in (None, ""):
+            continue
+        if right.fill is not None and right.fill.fgColor is not None and right.fill.fgColor.rgb == "FFFFFF00":
+            continue                       # already reported as missing/yellow
+        if not has_border(right):
+            continue
+        if (r, c + 1) in labels:
+            continue
+        if any(ws.cell(r, cc).value not in (None, "") and not isinstance(ws.cell(r, cc), MergedCell)
+               and (r, cc) not in labels for cc in range(c1 + 1, min(c1 + 4, 21))):
+            continue                       # a value further right in the same row
+        low = text.lower()
+        if "_" in text or re.search(r"signature|signed|stamp|sign\b|convention|certify|declaration of|supplemental|^arrival$|^departure$|^yes$|^no$|\(l\)|\(kg\)|\(pcs\)", low):
+            continue
+        if text.isupper() and not text.endswith(":"):
+            continue
+        out.append(re.sub(r"\s+", " ", text).rstrip(": ")[:45])
+    if out:
+        shown = "; ".join(out[:10]) + (f" (+{len(out) - 10} more)" if len(out) > 10 else "")
+        res.note(f"Boxes left empty because the label was not recognised: {shown}. "
+                 f"Fill these by hand - or send me this form so the word list can be extended.")

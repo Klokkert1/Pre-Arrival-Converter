@@ -3,8 +3,12 @@ import re, unicodedata
 
 STOP_SPLIT = re.compile(r"[^a-z0-9 ]+")
 
+_TRANSLIT = str.maketrans({"ß": "ss", "ø": "o", "Ø": "O", "æ": "ae", "Æ": "AE", "œ": "oe", "Œ": "OE", "ł": "l",
+                           "Ł": "L", "đ": "d", "Đ": "D", "ı": "i", "þ": "th"})
+
+
 def norm(text):
-    t = unicodedata.normalize("NFKD", str(text))
+    t = unicodedata.normalize("NFKD", str(text).translate(_TRANSLIT))
     t = "".join(c for c in t if not unicodedata.combining(c)).lower().replace("_", " ")
     t = STOP_SPLIT.sub(" ", t)
     return re.sub(r"\s+", " ", t).strip()

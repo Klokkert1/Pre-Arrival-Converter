@@ -1,0 +1,67 @@
+# Latviesu - CHECK (lower confidence): please have a Latvian speaker check
+[person]
+serial = nr, npk, numurs
+family_name = uzvards
+given_names = vards, vardi
+rank = amats, dienesta pakape, pakape, amats vai pakape
+nationality = pilsoniba, nacionalitate
+dob = dzimsanas datums
+pob = dzimsanas vieta
+gender = dzimums
+id_type = personu apliecinosa dokumenta veids, dokumenta veids
+id_number = personu apliecinosa dokumenta numurs, pases numurs, dokumenta numurs
+id_issue_date = izsniegsanas datums
+id_expiry = deriguma termins, derigs lidz, deriguma beigu datums
+id_issue_country = izsniegusa valsts
+remarks = piezimes, piezime
+[ports]
+port = osta, ostas nosaukums
+locode = un locode, locode
+country = valsts
+arrival = pienakšanas datums, pienaksanas datums, pienaksana
+departure = izbraukšanas datums, izbrauksanas datums, izbrauksana
+sec_level = drosibas limenis, aizsardzibas limenis
+next_port = nakamā osta, nakama osta
+[waste]
+w_type = atkritumu veids, atkritumu tips
+w_deliver = nodosanai, nododamais daudzums
+w_capacity = uzglabasanas ietilpiba
+w_onboard = uz kuga, uz kuga, uz klaja
+w_generated = paredzamais daudzums, novertetais daudzums
+w_next_port = nakama nodosanas osta
+w_remarks = piezimes
+[fields]
+ship_name = kuga nosaukums, kuga nosaukums
+imo = imo numurs
+call_sign = izsaukuma signals, izsaukuma zime
+flag = karogs, karoga valsts
+master_name = kapteinis, kapteina vards
+gt = bruto tilpiba, bruto tonnaza
+nt = neto tilpiba, neto tonnaza
+ship_type = kuga tips, kuga veids
+voyage_no = reisa numurs
+port_arr = pienakšanas osta, pienaksanas osta
+port_dep = izbrauksanas osta
+date_arr = pienaksanas datums
+date_dep = izbrauksanas datums
+last_port = pedeja osta, iepriekseja osta, pedeja piestatna osta
+eta_dt = paredzamais pienaksanas laiks, eta
+port_registry = reģistra osta, registra osta, pieraksta osta
+movement_arrival = pienaksana
+movement_departure = izbrauksana
+company_name = kugu ipasnieks, kompanijas nosaukums
+[store_classes]
+spirits = stipras alkohola dzerieni, viskijs, degvins, roms
+beer = alus
+wine = vins
+cigarettes = cigaretes
+tobacco = tabaka
+meat = gala
+coffee = kafija
+fresh_water = saldudens, dzerama udens
+paint = krasa
+[stores]
+article = preces nosaukums, prece, preces, nosaukums
+quantity = daudzums, skaits
+unit = mervienība, mervieniba
+location = atrasanas vieta uz kuga, uzglabasanas vieta

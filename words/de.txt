@@ -1,0 +1,17 @@
+# Deutsch - zusaetzliche Woerter (die Grundwoerter stehen im Programm) - CHECK durch Muttersprachler
+[fields]
+flag = staatszugehorigkeit des schiffes, flaggenstaat des schiffes
+date_mv = datum der ankunft abfahrt
+date_arr = datum der ankunft
+date_dep = datum der abfahrt
+port_arr = ankunftshafen, hafen der ankunft
+port_dep = abfahrtshafen, hafen der abfahrt
+last_port = letzter hafen, letzter anlaufhafen, vorheriger hafen
+voyage_no = reisenummer, reise nr
+port_registry = registerhafen, heimathafen
+call_sign = unterscheidungssignal, rufzeichen
+[stores]
+article = bezeichnung des artikels, bezeichnung, artikelbezeichnung
+quantity = menge, anzahl
+unit = einheit
+location = lagerort, standort an bord
