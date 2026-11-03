@@ -1,13 +1,14 @@
 # English - extra wordings (the basic English words are inside the program)
 [person]
 family_name = surname, last name, lastname
-given_names = firstname, first name, second name
+given_names = firstname, first name, first names, forenames, second name
 dob = birthday, birthdate, birth date
 gender = sex
 id_type = documenttype, document type
-id_number = documentno, document no, document number, docno, passport no, passport number
+id_number = document id, id document number, documentno, document no, document number, docno, passport no, passport number
 id_expiry = documentexpirydate, document expiry date, expiry date of document
 nationality = nationality
+rank = rank/post, rank post, post, rank or post
 [fields]
 owner = owner full style, operator manager full style, owner full name, owners and managers
 imo = imo no, imo number, imo
