@@ -131,6 +131,117 @@ def _isps_row(ws, r, f, res):
 
 
 # ---------------------------------------------------------------- report: labels that were not filled
+WRITES = set()
+_ORIG = {}
+
+
+def start_tracking():
+    """Remember every cell the program writes to (even when it writes the same value that was already there)."""
+    from openpyxl.cell.cell import Cell
+    WRITES.clear()
+    if "p" in _ORIG:
+        return
+    p = Cell.__dict__["value"]
+    _ORIG["p"] = p
+
+    def setter(self, v):
+        try:
+            WRITES.add((self.parent.title, self.row, self.column))
+        except Exception:
+            pass
+        p.fset(self, v)
+    Cell.value = property(p.fget, setter)
+
+
+def stop_tracking():
+    from openpyxl.cell.cell import Cell
+    if "p" in _ORIG:
+        Cell.value = _ORIG.pop("p")
+
+
+def snapshot_values(wb):
+    """All filled-in values of the form as it came in (to find old values that nobody replaced)."""
+    snap = {}
+    for ws in wb.worksheets:
+        if ws.sheet_state != "visible":
+            continue
+        snap[ws.title] = {(r, c): cell.value for (r, c), cell in list(ws._cells.items())
+                          if r <= 60 and c <= 20 and cell.value not in (None, "")
+                          and not (isinstance(cell.value, str) and cell.value.startswith("="))}
+    return snap
+
+
+def report_old_values(ws, res, labels, values):
+    """A label that stayed as it was, with a value from an earlier call that nobody replaced: yellow + note."""
+    from forms import anchor, span, mark
+    import vocabulary as V
+    from matching import match
+
+    def is_label(t):
+        t = str(t).strip()
+        if re.match(r"^\d+(\.\d+)?\.?\s+[A-Za-z(]", t) and len(t) > 5:
+            return True
+        if t.endswith(":"):
+            return True
+        return any(match(t, v)[0] for v in (V.FIELDS, V.PERSON, V.PORTS, V.WASTE))
+
+    real = {k: t for k, t in labels.items() if is_label(t)}
+    row_count = {}
+    for (r, c) in real:
+        row_count[r] = row_count.get(r, 0) + 1
+    flagged = []
+    for (r, c), text in sorted(real.items()):
+        cell = ws.cell(r, c)
+        if isinstance(cell, MergedCell) or cell.value != text or row_count.get(r, 0) >= 4:
+            continue
+        low = text.lower()
+        if len(text) < 4 or text.endswith("?") or "_" in text or (text.isupper() and not text.endswith(":")) or re.search(
+                r"signature|signed|stamp|convention|certify|declaration of|^arrival$|^departure$|^yes$|^no$|remarks|attached", low):
+            continue
+        try:
+            c0, c1, r0, r1 = span(ws, r, c)
+            below = anchor(ws, r1 + 1, c0)
+            right = anchor(ws, r0, c1 + 1)
+        except Exception:
+            continue
+        numbered = bool(re.match(r"^\d+(\.\d+)?\.?\s+\S", text))
+        target = None
+        for cand in ((below, right) if numbered else (right, below)):
+            if cand is None or isinstance(cand, MergedCell):
+                continue
+            key = (cand.row, cand.column)
+            if key in real or key not in values or cand.value != values[key] or (ws.title, cand.row, cand.column) in WRITES:
+                continue                  # not an old value, or already replaced
+            if isinstance(cand.value, str) and (cand.value.strip().endswith(":") or len(cand.value) > 80):
+                continue
+            if cand.fill is not None and cand.fill.fgColor is not None and cand.fill.fgColor.rgb == "FFFFFF00":
+                continue
+            target = cand
+            break
+        if target is None:
+            continue
+        group = [target]
+        cc = target.column + 1
+        while cc <= 20 and cc <= target.column + 3:        # further old values in the same row of boxes
+            nxt = ws.cell(target.row, cc)
+            if isinstance(nxt, MergedCell):
+                cc += 1
+                continue
+            if (nxt.row, nxt.column) in real or (nxt.row, nxt.column) not in values or nxt.value != values[(nxt.row, nxt.column)] \
+                    or (ws.title, nxt.row, nxt.column) in WRITES:
+                break
+            group.append(nxt)
+            cc += 1
+        for g in group:
+            mark(g)
+        res.yellow += len(group)
+        flagged.append(re.sub(r"\s+", " ", text).rstrip(": ")[:40])
+    if flagged:
+        shown = "; ".join(flagged[:10]) + (f" (+{len(flagged) - 10} more)" if len(flagged) > 10 else "")
+        res.note(f"Old values from an earlier call were left in place (yellow) because the master has nothing for them: "
+                 f"{shown}. Please check or replace them.")
+
+
 def snapshot_labels(wb):
     """Text cells of the form as it came in (these are the form's own labels)."""
     snap = {}

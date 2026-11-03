@@ -634,6 +634,14 @@ def find_value_cell(ws, r, c, force_below=False):
     return None, False, False
 
 
+def _drop_old(cell, res, label):
+    """The master has nothing for this box: an old value of an earlier call must not stay in it."""
+    if isinstance(cell, MergedCell) or blank(cell.value) or is_formula(cell.value):
+        return
+    cell.value = None
+    res.note(f"'{str(label)[:40]}': the old value was removed because the master has nothing for it.")
+
+
 def fill_fields(ctx, ws, res, allowed_fields, exclude, section_aware=False):
     master, wb = ctx["master"], ctx["wb"]
     found = []
@@ -696,6 +704,7 @@ def fill_fields(ctx, ws, res, allowed_fields, exclude, section_aware=False):
             res.note(f"'{label}': not filled, unclear how this form wants it - please complete by hand.")
             continue
         if concept in V.NOT_IN_MASTER:
+            _drop_old(cell, res, label)
             mark(cell)
             res.yellow += 1
             res.missing.append(label)
@@ -721,6 +730,7 @@ def fill_fields(ctx, ws, res, allowed_fields, exclude, section_aware=False):
             else:
                 raw = _f.get("etd_departure")
         if blank(raw):
+            _drop_old(cell, res, label)
             mark(cell)
             res.yellow += 1
             res.missing.append(label)
@@ -1195,6 +1205,14 @@ def process_workbook(master, path, out_dir):
         _labels = _EXS.snapshot_labels(wb)
     except Exception:
         _EXS, _labels = None, {}
+    try:
+        _values = _EXS.snapshot_values(wb) if _EXS else {}
+    except Exception:
+        _values = {}
+    try:
+        _EXS.start_tracking()
+    except Exception:
+        pass
     for ws in wb.worksheets:
         if ws.sheet_state != "visible":
             continue
@@ -1212,9 +1230,15 @@ def process_workbook(master, path, out_dir):
         try:
             if _EXS and _r.kind and "not recognised" not in str(_r.kind):
                 _EXS.report_unfilled(ws, _r, _labels.get(ws.title, {}))
+                if "Maritime" not in str(_r.kind):
+                    _EXS.report_old_values(ws, _r, _labels.get(ws.title, {}), _values.get(ws.title, {}))
         except Exception:
             pass
         results.append(_r)
+    try:
+        _EXS.stop_tracking()
+    except Exception:
+        pass
     out_path = os.path.join(out_dir, os.path.basename(path))
     os.makedirs(out_dir, exist_ok=True)
     wb.save(out_path)
