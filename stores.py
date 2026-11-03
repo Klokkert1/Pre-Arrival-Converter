@@ -3,7 +3,7 @@ import re
 from openpyxl.cell.cell import MergedCell
 from matching import norm, compact
 
-ART = r"^(\d+\.?\d*\.?\s*)?(store item name|store item|name|name of article|number of article|article|articles|name of the article|artikel|artikelbezeichnung|nombre del articulo|description of (the )?stores)\b"
+ART = r"^(\d+\.?\d*\.?\s*)?(ship.?s stores|store item name|store item|name|name of article|number of article|article|articles|name of the article|artikel|artikelbezeichnung|nombre del articulo|description of (the )?stores)\b"
 QTY = ("quantity", "qty", "menge", "cantidad", "quantity kg ltr")
 UNIT = ("unit", "units", "quantity unit", "einheit", "unidad")
 LOC = r"location on board|place of storage|location|lagerort|ubicacion|stowage"
@@ -64,7 +64,7 @@ def find_article_table(ws):
             v = ws.cell(r, c).value
             if not isinstance(v, str):
                 continue
-            t = re.sub(r"^\s*\d+\.?\d*\.?\s*", "", re.sub(r"\s+", " ", v.lstrip("* ")).strip().lower())
+            t = re.sub(r"^\s*\d+\.?\d*\.?\s*", "", re.sub(r"\s+", " ", v.lstrip("* ")).strip().lower()).rstrip("* ").strip()
             if cols["qty"] is None and any(t.startswith(q) for q in QTY):
                 cols["qty"] = c
             elif cols["unit"] is None and t in UNIT:
@@ -200,7 +200,14 @@ def fill_article_table(ctx, ws, res, cols):
         q = _anchor(ws, r, cols["qty"])
         if cols["unit"]:
             q.value = qv
-            _anchor(ws, r, cols["unit"]).value = it["unit"] or None
+            _uc = _anchor(ws, r, cols["unit"])
+            _uc.value = it["unit"] or None
+            _al = get_allowed(ctx["wb"], ws, _uc)
+            if _al and it["unit"]:
+                import convert as _C
+                _pk = _C.choose_from_list(it["unit"], _al)
+                if _pk is not None:
+                    _uc.value = _pk
         else:
             q.value = f"{qv} {it['unit'] or ''}".strip()
         if cols["loc"]:

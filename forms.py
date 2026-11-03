@@ -921,6 +921,9 @@ def process_sheet(ctx, ws):
     if re.search(r"instruction|reference|unlocode|locode|notice|conditions|taul|document type|dictionary|country codes", ws.title, re.I):
         res.note("Information sheet; left untouched.")
         return res
+    if re.search(r"ballast|waste receipt|ferry manifest|bunkering", ws.title, re.I):
+        res.note("This kind of sheet (ballast water / waste receipt / ferry manifest / bunkering) is not filled automatically yet: fill it by hand.")
+        return res
     master = ctx["master"]
     if re.search(r"health.*page\s*[2-9]|declaration of health.*page\s*[2-9]", ws.title, re.I):
         res.note("Continuation page of the health declaration (persons who joined the ship, port details): "
@@ -1100,7 +1103,8 @@ def process_sheet(ctx, ws):
 def _static_language_labels(wb, path):
     """Labels that are language-switch formulas (=IF(Settings!B6="bg","..","Store item name")) become their
     displayed text, so the label recognition can read them."""
-    if not any("Settings!" in str(c.value) for ws in wb.worksheets[:3] for row in ws.iter_rows(min_row=1, max_row=4)
+    if not any(("Settings!" in str(c.value) or "Languages!" in str(c.value)) for ws in wb.worksheets[:3]
+               for row in ws.iter_rows(min_row=1, max_row=8)
                for c in row if isinstance(c.value, str) and c.value.startswith("=")):
         return
     wv = load_workbook(path, data_only=True)
@@ -1111,7 +1115,7 @@ def _static_language_labels(wb, path):
         for row in ws.iter_rows(min_row=1, max_row=min(ws.max_row, 60)):
             for c in row:
                 f = c.value
-                if (isinstance(f, str) and f.startswith("=") and "Settings!" in f and "_N_" not in f
+                if (isinstance(f, str) and f.startswith("=") and ("Settings!" in f or "Languages!" in f) and "_N_" not in f
                         and not isinstance(c, MergedCell)):
                     v = wsv[c.coordinate].value
                     if isinstance(v, str) and v.strip() and not v.startswith("DO NOT FILL"):
