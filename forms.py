@@ -579,6 +579,23 @@ def find_value_cell(ws, r, c, force_below=False):
     """Where does the value for the label at (r, c) go? Returns (cell, looks_like_input, already_filled)."""
     c0, c1, r0, r1 = span(ws, r, c)
     cands = []
+    # numbered label ("1.1 Name of vessel") with a box right below it: the value goes below
+    if not force_below and re.match(r"^\s*\d+(\.\d+)?\.?\s+\S", str(ws.cell(r, c).value or "")) and r1 + 1 <= ws.max_row:
+        _b = anchor(ws, r1 + 1, c0)
+        _bc0, _bc1, _, _ = span(ws, _b.row, _b.column)
+        _right = anchor(ws, r0, c1 + 1) if c1 + 1 <= ws.max_column else None
+        _right_label = _right is not None and isinstance(_right.value, str) and bool(
+            re.match(r"^\s*\d+(\.\d+)?\.?\s+\S", _right.value) or any(match(_right.value, v)[0] for v in (V.FIELDS, V.PERSON)))
+        _right_blank = _right is None or blank(_right.value)
+        if _bc0 == c0 and _bc1 >= c1 and (_right_blank or _right_label):
+            if blank(_b.value):
+                if has_border(_b) and _right_label:
+                    return _b, True, False
+            elif isinstance(_b.value, str) and not any(match(_b.value, v)[0] for v in (V.FIELDS, V.PERSON, V.PORTS, V.WASTE)) \
+                    and not re.match(r"^\s*\d+(\.\d+)?\.?\s+\S", _b.value):
+                return _b, True, False          # the old value of an earlier call
+            elif not isinstance(_b.value, str) and not is_formula(_b.value):
+                return _b, True, False
     _start = c1 + 1
     for _col in range(c1 + 1, min(c1 + 4, ws.max_column + 1)):
         _sv = anchor(ws, r0, _col).value
