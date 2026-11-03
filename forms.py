@@ -1167,6 +1167,10 @@ def process_workbook(master, path, out_dir):
         _static_language_labels(wb, _wpath if os.path.exists(_wpath) else path)
     except Exception:
         pass
+    for _rec in list(master.crew) + list(getattr(master, "pax", []) or []):
+        if "effects_text" not in _rec:
+            _rec["effects_text"] = ", ".join(str(_rec[k]) for k in ("eff_cig", "eff_tob", "eff_wine", "eff_cash", "eff_elec")
+                                             if _rec.get(k)) or "NIL"
     ctx = {"master": master, "wb": wb, "rules": parse_instructions(wb), "path": path}
     results = []
     try:

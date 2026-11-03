@@ -9,6 +9,8 @@ To add a language or a new wording: just add more synonyms. Nothing else needs t
 # ---------- Table columns: crew list and passenger list ----------
 PERSON = {
     "serial": ["no", "nr", "number", "serial no", "serial number", "lfd nr", "nummer", "numero", "num"],
+    "effects_text": ["effects ineligible for relief", "effects ineligible", "crew effects", "crews effects", "effects",
+                     "personal effects", "effekten"],
     "family_name": ["family name", "surname", "last name", "lastname", "nachname", "familienname", "zuname",
                     "apellidos", "apellido", "primer apellido"],
     "given_names": ["given names", "given name", "first name", "forename", "forenames", "vorname", "vornamen",
