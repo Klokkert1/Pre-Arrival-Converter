@@ -15,6 +15,8 @@ PERSON = {
                     "nombres", "nombre de pila", "nombre"],
     "rank": ["rank or rating", "rank rating", "rank", "duty of crew", "function", "dienstgrad", "dienstrang",
              "funktion", "rango", "cargo", "puesto"],
+    "row_ship_name": ["shipname", "ship name", "vessel name", "name of ship", "name of vessel"],
+    "second_name": ["second name", "secondname", "middle name", "middle names", "second given name"],
     "nationality": ["nationality", "staatsangehorigkeit", "nationalitat", "nacionalidad"],
     "dob": ["date of birth", "birth date", "geburtsdatum", "fecha de nacimiento", "dob"],
     "pob": ["place of birth", "birth place", "geburtsort", "lugar de nacimiento"],
@@ -99,8 +101,22 @@ FIELDS = {
     "date_arr": ["date of arrival", "arrival date", "ankunftsdatum"],
     "date_dep": ["date of departure", "departure date", "abfahrtsdatum"],
     "last_port": ["last port of call", "last port", "letzter anlaufhafen"],
-    "eta_dt": ["expected date and time of arrival", "date and time of arrival", "eta"],
+    "eta_dt": ["expected date and time of arrival", "date and time of arrival", "eta", "eta time", "eta date and time", "estimated time of arrival", "estimated date and time of arrival"],
     "port_registry": ["port of registry", "registry port", "heimathafen"],
+    "length": ["length overall", "loa", "length over all", "length of ship", "length of vessel", "ship length", "vessel length"],
+    "breadth": ["beam", "breadth", "moulded breadth", "breadth moulded", "breadth of ship", "breadth of vessel", "beam of vessel"],
+    "dwt": ["deadweight", "dwt", "summer dwt", "summer deadweight", "deadweight tonnage"],
+    "draft_fa": ["draft fwd aft", "draught fwd aft", "drafts fwd aft", "draft forward aft", "draught forward aft"],
+    "draft_fore": ["draft forward", "forward draft", "draught forward", "fwd draft", "draft fwd", "draught fwd"],
+    "draft_aft": ["draft aft", "aft draft", "draught aft"],
+    "etd_dt": ["etd", "etd time", "etd date and time", "estimated time of departure", "estimated date and time of departure"],
+    "berth": ["berth", "berth bollard nos", "berth number", "berth name", "berth no", "berth bollard"],
+    "agent": ["vessel agent", "ship s agent", "ships agent", "agent", "name of agent", "agent s name", "name of ship s agent"],
+    "owner": ["owner", "owners", "ship owner", "registered owner", "owner manager", "vessel owner"],
+    "ship_phone": ["vessel telephone", "ship telephone", "ship phone", "vessel phone", "telephone number of ship"],
+    "ship_email": ["vessel e mail", "ship e mail", "vessel email", "ship email", "e mail of ship", "e mail of vessel"],
+    "mmsi": ["mmsi", "mmsi number", "mmsi no"],
+    "official_no": ["official number", "official no", "official number of ship"],
     "movement_arrival": ["arrival"],
     "movement_departure": ["departure"],
     # security
@@ -124,7 +140,7 @@ FIELDS = {
 }
 SECURITY_FIELDS = {"issc_valid", "issc_issuer", "issc_issuer_type", "ssp_onboard", "issc_expiry", "cso_given",
                    "cso_family", "cso_phone", "cso_email", "company_name", "ship_config", "cargo_condition", "ballast"}
-HEADER_FIELDS = {"eta_dt", "port_registry", "nt", "voyage_no", "port_mv", "port_arr", "port_dep", "date_mv", "date_arr", "date_dep", "last_port", "ship_name", "imo", "portnet_no", "movement_arrival", "movement_departure", "flag", "call_sign",
+HEADER_FIELDS = {"length", "breadth", "dwt", "draft_fa", "draft_fore", "draft_aft", "etd_dt", "berth", "agent", "owner", "ship_phone", "ship_email", "mmsi", "official_no", "eta_dt", "port_registry", "nt", "voyage_no", "port_mv", "port_arr", "port_dep", "date_mv", "date_arr", "date_dep", "last_port", "ship_name", "imo", "portnet_no", "movement_arrival", "movement_departure", "flag", "call_sign",
                  "gt", "master_name", "ship_type"}
 _PX = {"date", "time", "facility", "expected", "ship", "berth", "agent", "estimated"}
 FIELD_EXCLUDE = {"port_mv": _PX, "port_arr": _PX, "port_dep": _PX, "last_port": {"facility", "date", "time", "delivery"},

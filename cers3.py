@@ -98,6 +98,8 @@ def fill_cers_header(ctx, ws, res):
                     cv = cand.value
                     if isinstance(cv, str) and cv.strip() and any(re.search(rx, norm(cv)) for rx, _ in SPEC):
                         break
+                    if isinstance(cv, str) and len(cv.split()) >= 7 and len(cv) > 45:
+                        break                      # a note or instruction, not an input box
                     if isinstance(cv, str) and cv.startswith("="):
                         break
                     if boxed:

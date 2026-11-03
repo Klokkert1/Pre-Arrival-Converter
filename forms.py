@@ -215,6 +215,21 @@ def detect_tables(ws, vocab, min_hits=3):
                 used.add(concept)
             elif concept == "port":
                 t.cols[c] = "port_name"          # a second port column (e.g. 'Port LOCODE' and 'Port name')
+        # one header 'date of arrival / departure' above two or three narrow columns: first = arrival, last = departure
+        for c in list(t.cols):
+            if t.cols[c] in ("arrival", "departure") and "arrival" in vocab and "departure" in vocab:
+                tx = norm(" ".join(texts.get(c, [])))
+                if re.search(r"arriv", tx) and re.search(r"depart", tx):
+                    extra = []
+                    cc = c + 1
+                    while cc <= c + 2 and cc not in texts and cc not in t.cols and cc <= ws.max_column:
+                        extra.append(cc)
+                        cc += 1
+                    if extra:
+                        t.cols[c] = "arrival"
+                        t.cols[extra[-1]] = "departure"
+                        for _mid in extra[:-1]:
+                            t.cols[_mid] = "transit_time"
         t.texts = texts
         for c, tx in texts.items():
             t.hints[c] = " ".join(tx)
@@ -230,7 +245,22 @@ def detect_tables(ws, vocab, min_hits=3):
         t.data_start = data_start
         t.serial_col = next((c for c, k in t.cols.items() if k == "serial"), None)
         sc = t.serial_col or (min(keycols) - 1 if keycols and min(keycols) > 1 else None)
+        # guidance line(s) under the header ("Enter the 3-letter country code...", "Only values from list allowed")
+        for _ in range(2):
+            _g = [ws.cell(t.data_start, c).value for c in keycols
+                  if not isinstance(ws.cell(t.data_start, c), MergedCell)]
+            _g = [x for x in _g if isinstance(x, str) and x.strip()]
+            if len(_g) >= 2 and sum(1 for x in _g if re.match(r"(?i)\s*(enter|only|please|select|use|insert|fill|choose|example|e\.g\.|max|must|if )", x)
+                                    or len(x) > 60) >= max(2, len(_g) // 2):
+                t.data_start += 1
         if sc:
+            # a blank spacer line between the header and the numbered lines
+            for _ in range(2):
+                _row = [ws.cell(t.data_start, c).value for c in range(1, min(ws.max_column, 20) + 1)
+                        if not isinstance(ws.cell(t.data_start, c), MergedCell)]
+                _nx = ws.cell(t.data_start + 1, sc).value
+                if all(blank(x) for x in _row) and not blank(_nx) and re.fullmatch(r"\d{1,3}", str(_nx).strip()):
+                    t.data_start += 1
             # a second header line in another language: text only, while the lines below are numbered
             for _ in range(2):
                 nxt = ws.cell(t.data_start + 1, sc).value
@@ -329,6 +359,8 @@ def convert_cell(ctx, ws, cell, concept, rec, hints, mandatory, rule):
         raw = (rec.get("locode") or rec.get("port")) if want_locode else rec.get("port")
         return (raw, "ok") if not blank(raw) else (None, "missing" if mandatory else "blank")
     raw = rec.get(concept)
+    if concept == "row_ship_name":
+        raw = re.sub(r"^\s*m\.?\s?v\.?\s+", "", str(ctx["master"].fields.get("ship_name") or ""), flags=re.I) or None
     if blank(raw):
         return None, ("missing" if mandatory else "blank")
     wb = ctx["wb"]
@@ -343,6 +375,25 @@ def convert_cell(ctx, ws, cell, concept, rec, hints, mandatory, rule):
             cell.number_format = "dd-mm-yyyy"
         return d, "ok"
     allowed = get_allowed(wb, ws, cell)
+    _old = cell.value if isinstance(cell.value, str) else None
+    _exs = ctx.setdefault("col_examples", {})
+    _key = (ws.title, cell.column, concept)
+    if _old and re.fullmatch(r"[A-Z]{2,3}|Male|Female|M|F|MALE|FEMALE|male|female", _old.strip()):
+        _exs.setdefault(_key, _old)
+    elif not _old and _key in _exs:
+        _old = _exs[_key]
+    if _old and not allowed:                      # the old value shows which form the box wants
+        _o = _old.strip()
+        if concept in COUNTRY_CONCEPTS:
+            if re.fullmatch(r"[A-Z]{2}", _o):
+                hints = hints + " iso 2 code"
+            elif re.fullmatch(r"[A-Z]{3}", _o):
+                hints = hints + " iso 3"
+        elif concept == "gender":
+            if _o.lower() in ("male", "female"):
+                hints = hints + " male female"
+            elif _o.upper() in ("M", "F"):
+                hints = hints + " m f"
     if concept in COUNTRY_CONCEPTS:
         extra = " iso 3" if "alpha-3" in rule.lower() else (" iso 2 code" if "alpha-2" in rule.lower() else "")
         v, ok = C.convert_country(raw, allowed, hints + extra)
@@ -506,15 +557,48 @@ def fill_table(ctx, ws, t, records, res):
 
 
 # ------------------------------------------------------------------ single fields (label / value)
+def _stale_value(ws, a):
+    """A text cell right of a label: an old filled-in value (True) or the next label (False)?"""
+    t = str(a.value).strip()
+    if not t or t.endswith(":") or len(t) > 90 or (len(t.split()) > 3 and not re.search(r"\d", t)):
+        return False
+    if a.font is not None and a.font.b:
+        return False
+    if not (has_border(a) or not a.protection.locked or has_dv(ws, a)):
+        return False
+    for vocab in (V.FIELDS, V.PERSON, V.PORTS, V.WASTE):
+        if match(t, vocab)[0]:
+            return False
+    return True
+
+
 def find_value_cell(ws, r, c, force_below=False):
     """Where does the value for the label at (r, c) go? Returns (cell, looks_like_input, already_filled)."""
     c0, c1, r0, r1 = span(ws, r, c)
     cands = []
-    for col in (range(c1 + 1, min(c1 + 7, ws.max_column + 1)) if not force_below else []):
+    _start = c1 + 1
+    for _col in range(c1 + 1, min(c1 + 4, ws.max_column + 1)):
+        _sv = anchor(ws, r0, _col).value
+        if isinstance(_sv, str) and _sv.strip() in (":", "=", ":-"):
+            _start = _col + 1            # the value comes after the separator
+            break
+    for col in (range(_start, min(_start + 6, ws.max_column + 1)) if not force_below else []):
         a = anchor(ws, r0, col)
+        if isinstance(a.value, str) and a.value.strip() in (":", "=", "-", "–", ":-", "->"):
+            continue                       # a separator between label and value
         if not blank(a.value):
-            if is_formula(a.value) or not isinstance(a.value, str):
+            if is_formula(a.value):
                 return a, True, True
+            if not isinstance(a.value, str):
+                if col == _start and _start > c1 + 1:
+                    return a, True, False
+                if has_border(a) or not a.protection.locked or has_dv(ws, a):
+                    return a, True, False      # an old number/date from an earlier call: will be replaced
+                return a, True, True
+            if col == _start and _start > c1 + 1 and not a.value.strip().endswith(":"):
+                return a, True, False          # first cell after a ':' separator is the value (old or empty)
+            if _stale_value(ws, a):
+                return a, True, False          # an old value from an earlier call: will be replaced
             break
         looks = (not a.protection.locked) or has_dv(ws, a) or has_border(a)
         if looks:
@@ -600,6 +684,11 @@ def fill_fields(ctx, ws, res, allowed_fields, exclude, section_aware=False):
         raw = master.fields.get(key) if key in master.fields else master.waste["header"].get(key)
         if concept == "eta_dt":
             raw = master.fields.get("eta_arrival") or master.fields.get("eta")
+        if concept == "etd_dt":
+            raw = master.fields.get("etd_departure")
+        if concept == "draft_fa":
+            _fo, _af = master.fields.get("draft_fore"), master.fields.get("draft_aft")
+            raw = f"F= {_fo}  A= {_af}" if not blank(_fo) and not blank(_af) else None
         if concept in ("port_mv", "port_arr", "port_dep", "date_mv", "date_arr", "date_dep"):
             _f = master.fields
             _dep = str(_f.get("movement") or "Arrival").strip().lower().startswith("dep")
@@ -616,8 +705,7 @@ def fill_fields(ctx, ws, res, allowed_fields, exclude, section_aware=False):
             res.yellow += 1
             res.missing.append(label)
             continue
-        if concept == "eta_dt":
-            raw = master.fields.get("eta_arrival") or master.fields.get("eta")
+        if concept in ("eta_dt", "etd_dt"):
             if hasattr(raw, "hour"):
                 if not C.is_date_format(cell.number_format):
                     cell.number_format = "dd-mm-yyyy hh:mm"
@@ -824,10 +912,17 @@ PERSON_MIN = 4
 def process_sheet(ctx, ws):
     reset_dims(ws)
     res = SheetResult(ws.title)
-    if re.search(r"instruction|reference|unlocode|locode|notice|conditions|taul|^list$", ws.title, re.I):
+    if re.fullmatch(r"\s*list\s*", ws.title, re.I) and ws.max_column <= 3:
+        res.note("Information sheet; left untouched.")
+        return res
+    if re.search(r"instruction|reference|unlocode|locode|notice|conditions|taul|document type|dictionary|country codes", ws.title, re.I):
         res.note("Information sheet; left untouched.")
         return res
     master = ctx["master"]
+    if re.search(r"health.*page\s*[2-9]|declaration of health.*page\s*[2-9]", ws.title, re.I):
+        res.note("Continuation page of the health declaration (persons who joined the ship, port details): "
+                 "not filled - complete by hand if it applies.")
+        return res
     exclude = set()
     is_mdoh = H.is_health(ws)
     title_text = norm(ws.title + " " + " ".join(str(ws.cell(r, c).value) for r in range(1, 9)
@@ -898,6 +993,8 @@ def process_sheet(ctx, ws):
     if F1.is_fal1(ws) and F1.fill_fal1(ctx, ws, res):
         return res
     if POC.is_poc(ws) and POC.fill_poc(ctx, ws, res):
+        return res
+    if F4.is_templist(ws) and F4.fill_templist(ctx, ws, res):
         return res
     if F4.fill_fal4(ctx, ws, res):
         return res
@@ -990,6 +1087,8 @@ def process_sheet(ctx, ws):
         if any(k == "waste" for k, _ in tables):
             allowed |= V.WASTE_HEADER_FIELDS
         n = fill_fields(ctx, ws, res, allowed, exclude)
+        if res.kind == "not recognised" and n >= 2 and not tables:
+            res.kind = "Information form"
         if res.kind != "not recognised" and n:
             res.lines.append(f"{n} header {'field' if n == 1 else 'fields'} filled")
     return res
@@ -997,7 +1096,16 @@ def process_sheet(ctx, ws):
 
 def process_workbook(master, path, out_dir):
     import os
-    wb = load_workbook(path)
+    import slim as _slim
+    _wpath, _tmp = _slim.slim(path)
+    try:
+        wb = load_workbook(_wpath)
+    finally:
+        if _tmp:
+            try:
+                os.remove(_wpath)
+            except OSError:
+                pass
     ctx = {"master": master, "wb": wb, "rules": parse_instructions(wb), "path": path}
     results = []
     try:

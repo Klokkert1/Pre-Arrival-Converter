@@ -163,6 +163,10 @@ def report_unfilled(ws, res, labels):
             continue
         if right is None or isinstance(right, MergedCell):
             continue
+        below = anchor(ws, r1 + 1, c0)
+        if below is not None and not isinstance(below, MergedCell) and below.value not in (None, "") \
+                and labels.get((below.row, below.column)) != str(below.value).strip():
+            continue                       # the value sits below the label
         if right.value not in (None, ""):
             continue
         if right.fill is not None and right.fill.fgColor is not None and right.fill.fgColor.rgb == "FFFFFF00":
@@ -172,10 +176,12 @@ def report_unfilled(ws, res, labels):
         if (r, c + 1) in labels:
             continue
         if any(ws.cell(r, cc).value not in (None, "") and not isinstance(ws.cell(r, cc), MergedCell)
-               and (r, cc) not in labels for cc in range(c1 + 1, min(c1 + 4, 21))):
+               and labels.get((r, cc)) != str(ws.cell(r, cc).value).strip() for cc in range(c1 + 1, min(c1 + 4, 21))):
             continue                       # a value further right in the same row
         low = text.lower()
         if "_" in text or re.search(r"signature|signed|stamp|sign\b|convention|certify|declaration of|supplemental|^arrival$|^departure$|^yes$|^no$|\(l\)|\(kg\)|\(pcs\)", low):
+            continue
+        if re.match(r"^\d+ ?(till|until|to|-)", low):
             continue
         if text.isupper() and not text.endswith(":"):
             continue

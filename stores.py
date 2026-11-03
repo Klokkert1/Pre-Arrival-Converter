@@ -35,11 +35,12 @@ HEADER = [
     ("call_sign", r"^call sign|^rufzeichen|^indicativo"),
     ("voyage_no", r"^voyage number|^reisenummer"),
     ("port", r"^port of arrival ?/ ?departure|^port of (arrival|departure)"),
-    ("date", r"^date of arrival ?/ ?departure|^date of (arrival|departure)"),
+    ("date", r"^date of arrival ?/ ?departure|^date of (arrival|departure)|^date of temp"),
     ("flag", r"^flag state|^flag of ship|^flagge|^nationality of ship"),
     ("from_dest", r"^port arrived from|port of destination"),
     ("lastnext", r"last port of call ?/ ?next port of call|last/next port"),
     ("persons", r"^number of persons on board|^persons on board"),
+    ("crew_count", r"^no of crew|^number of crew|^crew count"),
 ]
 
 
@@ -227,6 +228,7 @@ def fill_header(ctx, ws, res, upto_row):
             "date_arr": f.get("eta_arrival") or f.get("eta"), "date_dep": f.get("etd_departure"),
             "time_arr": f.get("eta_arrival") or f.get("eta"), "time_dep": f.get("etd_departure"),
             "stay": f.get("period_of_stay"),
+            "crew_count": len(master.crew) if master.crew else None,
             "persons": (len(master.crew) + len(master.pax)) if master.crew else None}
     import convert as C
     count = 0
@@ -301,6 +303,10 @@ def fill_header(ctx, ws, res, upto_row):
     if len(pos) == 2 and pos["arrival"][0] == pos["departure"][0]:
         for word, (r, c) in pos.items():
             left = anchor(ws, r, c - 1) if c > 1 else None
+            if left is not None and left.value in (None, "") and c > 2:
+                _l2 = anchor(ws, r, c - 2)
+                if isinstance(_l2.value, str) and len(_l2.value.strip()) <= 2:
+                    left = _l2                      # the tick box is one cell further left
             if left is None or (isinstance(left.value, str) and len(left.value.strip()) > 2):
                 continue
             left.value = "X" if word == ("departure" if dep else "arrival") else None
