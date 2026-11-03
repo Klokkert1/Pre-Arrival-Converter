@@ -15,11 +15,17 @@ KEYS = [  # (key, regex on the normalised master header)
 
 
 def read_master(wb):
-    if "Ballast" not in wb.sheetnames:
-        return []
-    ws = wb["Ballast"]
+    for name in ("Ballast_Tanks", "Ballast"):
+        if name in wb.sheetnames:
+            rows = _read_sheet(wb[name])
+            if rows:
+                return rows
+    return []
+
+
+def _read_sheet(ws):
     hdr_row, cols = None, {}
-    for r in range(4, min(ws.max_row, 80) + 1):
+    for r in range(1, min(ws.max_row, 80) + 1):
         t = norm(str(ws.cell(r, 2).value or ""))
         if t.startswith("tank") and not t.startswith("tanks "):
             c2 = {}
