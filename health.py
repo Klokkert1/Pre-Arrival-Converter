@@ -49,6 +49,14 @@ YELLOW = PatternFill("solid", fgColor="FFFF00")
 # order matters: first match wins
 QUESTIONS = [
     ("rats", r"rats or mice|abnormal mortality"),
+    ("ill_pax", r"ill persons more th"),
+    ("ill_now", r"currently ill persons|disease on board"),
+    ("death", r"person died on board"),
+    ("condition", r"infection condition"),
+    ("doctor", r"medical consultations"),
+    ("reinspection", r"sanitary reinspection"),
+    ("affected", r"visited infected area"),
+    ("animal", r"sick animal on board"),
     ("valid_cert", r"valid sanitation|sanitation control (exemption|certificate)|derat"),
     ("reinspection", r"re-?inspection"),
     ("affected", r"affected area"),
@@ -103,6 +111,8 @@ def yes_no(v):
 
 def is_health(ws):
     text = " ".join(str(ws.cell(r, c).value) for r in range(1, 8) for c in range(1, 8) if ws.cell(r, c).value).lower()
+    if re.search(r"\(y/n\)", text) and re.search(r"disease on board|ill persons|died on board", text):
+        return True
     return bool(re.search(r"declaration of health|health declaration|maritime health", text)) or \
         bool(re.search(r"declaration of health|health declaration", ws.title.lower()))
 
@@ -365,3 +375,43 @@ def fill_health(ctx, ws, res, exclude=()):
     res.kind = "Maritime Declaration of Health"
     res.lines.append(f"{stats['fields']} fields and {stats['q']} of {stats['q_total']} questions filled")
     return stats
+
+
+def is_yn_sheet(ws):
+    """Key/value health sheet: question labels ending in (Y/N) in one column, the answer in the next one."""
+    n = sum(1 for r in range(1, 40) for c in range(1, 3)
+            if isinstance(ws.cell(r, c).value, str) and "(y/n)" in ws.cell(r, c).value.lower())
+    return n >= 5
+
+
+def fill_yn_sheet(ctx, ws, res):
+    from forms import mark, blank, anchor
+    master = ctx["master"]
+    h, f = master.health, master.fields
+    ans = {"valid_cert": True if f.get("san_type") else None, "reinspection": yes_no(f.get("reinspection"))}
+    for k in ("death", "infectious", "ill_pax", "ill_now", "doctor", "condition", "sanitary", "stowaways", "animal",
+              "affected", "rats", "doctor_onboard"):
+        ans[k] = yes_no(h.get(k))
+    res.kind = "Maritime Declaration of Health"
+    done = total = 0
+    for r in range(1, min(ws.max_row, 60) + 1):
+        for c in (1, 2):
+            v = ws.cell(r, c).value
+            if not isinstance(v, str) or "(y/n)" not in v.lower():
+                continue
+            lab = _label_of(v)
+            q = next((k for k, rx in QUESTIONS if re.search(rx, lab)), None)
+            tgt = ws.cell(r, c + 2) if blank(ws.cell(r, c + 1).value) and isinstance(ws.cell(r, c + 1).value, type(None)) \
+                and not isinstance(ws.cell(r, c + 2).value, type(None)) else None
+            tgt = anchor(ws, r, c + 2) if tgt is None else tgt
+            if q is None:
+                continue
+            total += 1
+            a = ans.get(q)
+            if a is None:
+                mark(tgt); res.yellow += 1; res.missing.append(v.strip()[:50])
+            else:
+                tgt.value = bool(a) if isinstance(tgt.value, bool) or tgt.value is None else ("Yes" if a else "No")
+                done += 1
+    res.lines.append(f"{done} of {total} questions filled")
+    return True

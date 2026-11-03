@@ -930,6 +930,8 @@ def process_sheet(ctx, ws):
                  "not filled - complete by hand if it applies.")
         return res
     exclude = set()
+    if H.is_yn_sheet(ws) and H.fill_yn_sheet(ctx, ws, res):
+        return res
     is_mdoh = H.is_health(ws)
     title_text = norm(ws.title + " " + " ".join(str(ws.cell(r, c).value) for r in range(1, 9)
                                                 for c in range(1, 6) if ws.cell(r, c).value))
@@ -999,6 +1001,9 @@ def process_sheet(ctx, ws):
     if F1.is_fal1(ws) and F1.fill_fal1(ctx, ws, res):
         return res
     if POC.is_poc(ws) and POC.fill_poc(ctx, ws, res):
+        return res
+    import effects as EF
+    if EF.is_effects(ws) and EF.fill_effects(ctx, ws, res):
         return res
     if F4.is_templist(ws) and F4.fill_templist(ctx, ws, res):
         return res
@@ -1122,6 +1127,30 @@ def _static_language_labels(wb, path):
                         c.value = v.strip()
 
 
+def _clean_machine_headers(ws):
+    """Data-import tables with headers such as Last_10_calls_at_port_facilities_Date_of_arrival: the common
+    prefix is dropped and underscores become spaces while the sheet is read (the original text is put back)."""
+    saved = []
+    try:
+        cells = [c for c in ws[1] if isinstance(c.value, str) and "_" in c.value]
+        if len(cells) < 3 or ws.max_row < 2:
+            return saved
+        parts = [c.value.split("_") for c in cells]
+        n = 0
+        while all(len(p) > n + 1 for p in parts) and len({p[n] for p in parts}) == 1:
+            n += 1
+        for c in cells:
+            new = " ".join(c.value.split("_")[n:]).strip()
+            if new:
+                saved.append((c, c.value))
+                c.value = new
+    except Exception:
+        for c, v in saved:
+            c.value = v
+        return []
+    return saved
+
+
 def process_workbook(master, path, out_dir):
     import os
     import slim as _slim
@@ -1148,7 +1177,12 @@ def process_workbook(master, path, out_dir):
     for ws in wb.worksheets:
         if ws.sheet_state != "visible":
             continue
-        _r = process_sheet(ctx, ws)
+        _saved = _clean_machine_headers(ws)
+        try:
+            _r = process_sheet(ctx, ws)
+        finally:
+            for _c, _v in _saved:
+                _c.value = _v
         try:
             import extras as EX
             EX.post(ctx, ws, _r)
