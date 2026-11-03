@@ -25,6 +25,11 @@ LABEL_TO_ID = {
     "Ballast water discharge in port?": "bw_discharge", "Volume of ballast water to be discharged (m3)": "bw_discharge_vol",
     "Ballast water loaded in port?": "bw_loaded", "Volume of ballast water to be loaded (m3)": "bw_loaded_vol",
     "IMO ballast water guidelines on board?": "bw_guidelines",
+    "Total number of tanks on ship": "bw_tanks", "Number of tanks underwent alternative management": "bw_alt",
+    "Alternative method(s) used": "bw_alt_method", "Reason why no ballast water management was conducted": "bw_reason",
+    "Ballast water management plan implemented?": "bw_plan_impl",
+    "Number of tanks to be discharged": "bw_ds_tanks", "Volume units": "bw_units",
+    "Responsible officer's name and title": "bw_officer",
     # added from the company's own forms
     "Official number": "official_no", "Port of registry": "port_registry", "Inmarsat call numbers": "inmarsat",
     "UN/LOCODE of port of arrival/departure": "port_locode", "Date and time of arrival (ETA / ATA)": "eta_arrival",
@@ -101,6 +106,11 @@ class Master:
         self.ports = self._table("Last_10_Ports", PORTS, key="port", header_row=5, first=6, last=15)
         self.stores = self._stores()
         self.waste = self._waste()
+        import narcotics as _NC
+        self.narcotics = _NC.read_master(self.wb)
+        import ballast_tanks as _BT
+        self.ballast_tanks = _BT.read_master(self.wb)
+        _BT.derive_totals(self)
 
     def _table(self, sheet, vocab, key, header_row=5, first=6, last=None):
         if sheet not in self.wb.sheetnames:

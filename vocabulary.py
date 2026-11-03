@@ -145,9 +145,13 @@ SECURITY_FIELDS = {"issc_valid", "issc_issuer", "issc_issuer_type", "ssp_onboard
 # ---------- ballast water reporting form ----------
 BW_FIELDS = {
     "bw_tanks": ["total number of ballast tanks", "total no of ballast tanks on board", "total no of tanks on board",
-                 "total number of tanks on board", "total no of ballast tanks", "total number of tanks and holds"],
+                 "total number of tanks on board", "total no of ballast tanks", "total number of tanks and holds", "total no of tanks on ship", "total number of tanks on ship"],
     "bw_in_ballast": ["no of tanks in ballast", "number of tanks in ballast", "number of tanks and holds in ballast"],
-    "bw_exchanged": ["no of tanks exchanged", "number of tanks exchanged", "number of ballast water tanks underwent exchange"],
+    "bw_exchanged": ["underwent exchange", "no of tanks exchanged", "number of tanks exchanged", "number of ballast water tanks underwent exchange"],
+    "bw_alt": ["underwent alternative management"],
+    "bw_ds_tanks": ["total no ballast water tanks to be discharged", "number of ballast water tanks to be discharged",
+                    "tanks to be discharged"],
+    "bw_plan_impl": ["management plan implemented"],
     "bw_not_exchanged": ["no of tanks not exchanged", "number of tanks not exchanged"],
     "bw_on_board": ["total ballast water on board"],
     "bw_capacity": ["total ballast water capacity", "total capacity of tanks on board"],
@@ -163,7 +167,7 @@ BW_FIELDS = {
     "bw_loaded_vol": ["volume of loaded ballast water"],
     "bw_guidelines": ["imo ballast water guidelines on board"],
 }
-BW_YN = {"bw_plan", "bw_treatment", "bw_exchange_port", "bw_discharge", "bw_loaded", "bw_guidelines"}
+BW_YN = {"bw_plan_impl", "bw_plan", "bw_treatment", "bw_exchange_port", "bw_discharge", "bw_loaded", "bw_guidelines"}
 FIELDS.update(BW_FIELDS)
 BW_ALLOWED = set(BW_FIELDS) | {"ship_name", "imo", "call_sign", "flag", "gt", "ship_type", "owner", "agent", "last_port",
                                "next_port", "port_arr", "port_mv", "date_arr", "date_mv", "eta_dt", "master_name", "nt",

@@ -986,9 +986,16 @@ def process_sheet(ctx, ws):
     if re.search(r"instruction|reference|unlocode|locode|notice|conditions|taul|document type|dictionary|country codes", ws.title, re.I):
         res.note("Information sheet; left untouched.")
         return res
-    if re.search(r"ballast", ws.title, re.I):
+    import ballast_tanks as _BT0
+    _bw_text = " ".join(str(ws.cell(r, c).value) for r in range(1, 12) for c in range(1, 6) if isinstance(ws.cell(r, c).value, str))
+    if re.search(r"ballast", ws.title, re.I) or (re.search(r"(?i)ballast water", _bw_text) and _BT0.find_table(ws)):
         res.kind = "Ballast water report"
         exclude = set()
+        import ballast_tanks as BT
+        _tab = BT.fill_tanks(ctx, ws, res)
+        if _tab:
+            _rows = _tab[0]
+            exclude = {(r, c) for r in range(_tab[2], max(_rows) + 1) for c in range(1, ws.max_column + 1)}
         global LOOSE_STALE
         LOOSE_STALE = True
         try:
@@ -996,8 +1003,8 @@ def process_sheet(ctx, ws):
         finally:
             LOOSE_STALE = False
         res.lines.append(f"{n} fields filled")
-        res.note("Ballast water: the tank-by-tank history (source, exchange, discharge per tank) is not in the master; "
-                 "please complete that table by hand.")
+        if not _tab:
+            res.note("Ballast water: no tank-history table was found on this sheet; complete it by hand if the form has one.")
         return res
     if re.search(r"waste receipt|ferry manifest|bunkering", ws.title, re.I):
         res.note("This kind of sheet (ballast water / waste receipt / ferry manifest / bunkering) is not filled automatically yet: fill it by hand.")
@@ -1008,6 +1015,13 @@ def process_sheet(ctx, ws):
                  "not filled - complete by hand if it applies.")
         return res
     exclude = set()
+    import narcotics as NC
+    if NC.is_narcotic(ws):
+        _rows, _cols = NC.fill_narcotics(ctx, ws, res)
+        _excl = {(r, c) for r in range(min(_rows or [1]) - 1, (max(_rows) if _rows else 1) + 1) for c in range(1, ws.max_column + 1)}
+        _n = fill_fields(ctx, ws, res, V.HEADER_FIELDS, _excl)
+        res.lines.append(f"{_n} header fields filled")
+        return res
     if H.is_yn_sheet(ws) and H.fill_yn_sheet(ctx, ws, res):
         return res
     is_mdoh = H.is_health(ws)
