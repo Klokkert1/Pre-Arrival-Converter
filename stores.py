@@ -43,7 +43,7 @@ def find_article_table(ws):
         art = None
         for c in range(1, min(ws.max_column, 12) + 1):
             v = ws.cell(r, c).value
-            if isinstance(v, str) and re.search(ART, re.sub(r"\s+", " ", v).strip().lower()):
+            if isinstance(v, str) and re.search(ART, re.sub(r"\s+", " ", v.lstrip("* ")).strip().lower()):
                 art = c
                 break
         if not art:
@@ -53,7 +53,7 @@ def find_article_table(ws):
             v = ws.cell(r, c).value
             if not isinstance(v, str):
                 continue
-            t = re.sub(r"^\s*\d+\.?\d*\.?\s*", "", re.sub(r"\s+", " ", v).strip().lower())
+            t = re.sub(r"^\s*\d+\.?\d*\.?\s*", "", re.sub(r"\s+", " ", v.lstrip("* ")).strip().lower())
             if cols["qty"] is None and any(t.startswith(q) for q in QTY):
                 cols["qty"] = c
             elif cols["unit"] is None and t in UNIT:
@@ -97,7 +97,7 @@ def _aggregate(items, unit_text):
 
 
 def fill_article_table(ctx, ws, res, cols):
-    from forms import store_class, mark
+    from forms import store_class, mark, get_allowed
     master = ctx["master"]
     classes, names = {}, []
     for it in master.stores:
@@ -143,8 +143,14 @@ def fill_article_table(ctx, ws, res, cols):
         for i in items:
             used.add(id(i))
         unit_text = u.value if u is not None and not _blank(u.value) else None
+        if unit_text is None:
+            _h = re.search(r"\((l|ltr|litres?|liters?|kg|kgs|pcs|pieces|nr|no|number)\)\s*$", label, re.I)
+            if _h:
+                unit_text = {"l": "L", "ltr": "L", "litre": "L", "litres": "L", "liter": "L", "liters": "L",
+                             "kg": "kg", "kgs": "kg"}.get(_h.group(1).lower(), "pcs")
         total, unit, ok = _aggregate(items, unit_text)
         if not ok:
+            q.value = None
             mark(q); res.yellow += 1
             res.note(f"'{label}': the unit in the master ({', '.join(sorted({str(i['unit']) for i in items}))}) "
                      f"cannot be converted safely; left empty, please fill in by hand.")
@@ -152,6 +158,12 @@ def fill_article_table(ctx, ws, res, cols):
         if u is not None:
             if _blank(u.value):
                 u.value = unit
+                _al = get_allowed(ctx["wb"], ws, u)
+                if _al:
+                    import convert as _C
+                    _pk = _C.choose_from_list(unit, _al)
+                    if _pk is not None:
+                        u.value = _pk
             q.value = _num(total)
         else:
             q.value = f"{_num(total)} {unit}".strip()

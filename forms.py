@@ -830,6 +830,10 @@ def process_sheet(ctx, ws):
         if k == "wastereceipt":
             res.note("Waste receipt is completed after the port call; left untouched.")
             return res
+        if k == "stowawaylist":
+            res.kind = "Stowaway list"
+            res.note("Stowaway list: not filled (the crew are not stowaways). Fill in by hand if there are stowaways.")
+            return res
         if k == "wasteandresidues" and W2.fill_waste_sheet(ctx, ws, res):
             return res
         if k in MSW.MSW_SHEETS and k != "security":
