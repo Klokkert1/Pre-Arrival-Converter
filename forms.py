@@ -560,9 +560,16 @@ def fill_table(ctx, ws, t, records, res):
 
 
 # ------------------------------------------------------------------ single fields (label / value)
+LOOSE_STALE = False
+
+
 def _stale_value(ws, a):
     """A text cell right of a label: an old filled-in value (True) or the next label (False)?"""
     t = str(a.value).strip()
+    if LOOSE_STALE and t and not t.endswith(":") and 4 <= len(t) <= 40 and not re.search(r"\(.*\)", t) \
+            and not re.fullmatch(r"(?i)(m3|m\u00b3|mt|lt|tons?|tonnes?|kg|yes|no|n/?a)", t):
+        if not any(match(t, vocab)[0] for vocab in (V.FIELDS, V.PERSON, V.PORTS, V.WASTE)):
+            return True
     if not t or t.endswith(":") or len(t) > 90 or (len(t.split()) > 3 and not re.search(r"\d", t)):
         return False
     if a.font is not None and a.font.b:
@@ -601,6 +608,17 @@ def find_value_cell(ws, r, c, force_below=False):
         _sv = anchor(ws, r0, _col).value
         if isinstance(_sv, str) and _sv.strip() in (":", "=", ":-"):
             _start = _col + 1            # the value comes after the separator
+            break
+    if LOOSE_STALE and not force_below:
+        for col in range(_start, min(_start + 10, ws.max_column + 1)):
+            a = anchor(ws, r0, col)
+            if blank(a.value):
+                continue
+            if isinstance(a.value, str) and (a.value.strip().endswith(":") or any(
+                    match(a.value, vocab)[0] for vocab in (V.FIELDS, V.PERSON, V.PORTS, V.WASTE))):
+                break                      # the next label: the old value (if any) was before it
+            if _stale_value(ws, a):
+                return a, True, False
             break
     for col in (range(_start, min(_start + 6, ws.max_column + 1)) if not force_below else []):
         a = anchor(ws, r0, col)
@@ -698,6 +716,14 @@ def fill_fields(ctx, ws, res, allowed_fields, exclude, section_aware=False):
             res.yellow += 1
             continue
         label = ws.cell(r, c).value.strip()
+        if concept in V.BW_YN and any(isinstance(ws.cell(r, cc).value, str) and ws.cell(r, cc).value.strip().upper() in (
+                "YES", "NO", "Y", "N", "JA", "NEE", "EVET", "HAYIR") or (isinstance(ws.cell(r, cc).value, str) and re.match(
+                r"(?i)^(yes|no|evet|hay[ıi]r)\b", ws.cell(r, cc).value.strip())) for cc in range(c + 1, min(c + 40, ws.max_column) + 1)):
+            mark(ws.cell(r, c))
+            res.yellow += 1
+            res.missing.append(label)
+            res.note(f"'{label[:50]}': this form has Yes/No tick boxes next to the question; please tick by hand.")
+            continue
         if concept in V.UNSURE:
             mark(cell)
             res.yellow += 1
@@ -750,6 +776,18 @@ def fill_fields(ctx, ws, res, allowed_fields, exclude, section_aware=False):
                 cell.value = d
                 count += 1
                 continue
+        if concept in V.BW_YN:
+            _yn = H.yes_no(raw)
+            _tv = str(cell.value).strip().upper() if isinstance(cell.value, str) else ""
+            if _yn is None or _tv in ("YES", "NO", "Y", "N", "JA", "NEE", "EVET", "HAYIR"):
+                _drop_old(cell, res, label) if _tv not in ("YES", "NO", "Y", "N", "JA", "NEE", "EVET", "HAYIR") else None
+                if _tv in ("YES", "NO", "Y", "N", "JA", "NEE", "EVET", "HAYIR"):
+                    res.note(f"'{str(label)[:50]}': this form has Yes/No tick boxes next to the question; please tick by hand.")
+                mark(cell)
+                res.yellow += 1
+                res.missing.append(label)
+                continue
+            raw = "Yes" if _yn else "No"
         allowed = get_allowed(wb, ws, cell)
         if allowed:
             pick = C.choose_from_list(raw, allowed)
@@ -948,7 +986,20 @@ def process_sheet(ctx, ws):
     if re.search(r"instruction|reference|unlocode|locode|notice|conditions|taul|document type|dictionary|country codes", ws.title, re.I):
         res.note("Information sheet; left untouched.")
         return res
-    if re.search(r"ballast|waste receipt|ferry manifest|bunkering", ws.title, re.I):
+    if re.search(r"ballast", ws.title, re.I):
+        res.kind = "Ballast water report"
+        exclude = set()
+        global LOOSE_STALE
+        LOOSE_STALE = True
+        try:
+            n = fill_fields(ctx, ws, res, V.BW_ALLOWED, exclude)
+        finally:
+            LOOSE_STALE = False
+        res.lines.append(f"{n} fields filled")
+        res.note("Ballast water: the tank-by-tank history (source, exchange, discharge per tank) is not in the master; "
+                 "please complete that table by hand.")
+        return res
+    if re.search(r"waste receipt|ferry manifest|bunkering", ws.title, re.I):
         res.note("This kind of sheet (ballast water / waste receipt / ferry manifest / bunkering) is not filled automatically yet: fill it by hand.")
         return res
     master = ctx["master"]

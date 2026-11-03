@@ -91,7 +91,7 @@ FIELDS = {
     "call_sign": ["call sign", "callsign", "rufzeichen", "indicativo de llamada"],
     "flag": ["flag state", "flag", "flagge", "flaggenstaat", "bandera"],
     "master_name": ["name of master", "master", "kapitan", "capitan"],
-    "gt": ["gross tonnage", "gt", "bruttoraumzahl", "arqueo bruto"],
+    "gt": ["gross tonnage", "grt", "gt", "bruttoraumzahl", "arqueo bruto"],
     "nt": ["net tonnage", "nt", "nettoraumzahl", "arqueo neto"],
     "ship_type": ["type of ship", "ship type", "vessel type", "type of vessel", "schiffstyp", "tipo de buque"],
     "portnet_no": ["portnet number", "portnet no"],
@@ -142,13 +142,40 @@ FIELDS = {
 }
 SECURITY_FIELDS = {"issc_valid", "issc_issuer", "issc_issuer_type", "ssp_onboard", "issc_expiry", "cso_given",
                    "cso_family", "cso_phone", "cso_email", "company_name", "ship_config", "cargo_condition", "ballast"}
+# ---------- ballast water reporting form ----------
+BW_FIELDS = {
+    "bw_tanks": ["total number of ballast tanks", "total no of ballast tanks on board", "total no of tanks on board",
+                 "total number of tanks on board", "total no of ballast tanks", "total number of tanks and holds"],
+    "bw_in_ballast": ["no of tanks in ballast", "number of tanks in ballast", "number of tanks and holds in ballast"],
+    "bw_exchanged": ["no of tanks exchanged", "number of tanks exchanged", "number of ballast water tanks underwent exchange"],
+    "bw_not_exchanged": ["no of tanks not exchanged", "number of tanks not exchanged"],
+    "bw_on_board": ["total ballast water on board"],
+    "bw_capacity": ["total ballast water capacity", "total capacity of tanks on board"],
+    "bw_vol_arrival": ["volume at arrival", "ballast water volume at arrival"],
+    "bw_vol_departure": ["volume at departure", "ballast water volume at departure"],
+    "bw_plan": ["ballast water management plan on board", "ballast water manegment plan on board", "bwm plan on board"],
+    "bw_treatment": ["ballast water treatment on board", "ballast water treatment system on board"],
+    "bw_treatment_type": ["type of treatment"],
+    "bw_exchange_port": ["exchanges of ballast waters be carried out", "ballast water exchange be carried out"],
+    "bw_discharge": ["ballast water discharge"],
+    "bw_discharge_vol": ["volume of discharged ballast water"],
+    "bw_loaded": ["loaded ballast water"],
+    "bw_loaded_vol": ["volume of loaded ballast water"],
+    "bw_guidelines": ["imo ballast water guidelines on board"],
+}
+BW_YN = {"bw_plan", "bw_treatment", "bw_exchange_port", "bw_discharge", "bw_loaded", "bw_guidelines"}
+FIELDS.update(BW_FIELDS)
+BW_ALLOWED = set(BW_FIELDS) | {"ship_name", "imo", "call_sign", "flag", "gt", "ship_type", "owner", "agent", "last_port",
+                               "next_port", "port_arr", "port_mv", "date_arr", "date_mv", "eta_dt", "master_name", "nt",
+                               "voyage_no", "port_registry", "dwt"}
+
 HEADER_FIELDS = {"length", "breadth", "dwt", "draft_fa", "draft_fore", "draft_aft", "etd_dt", "berth", "agent", "owner", "ship_phone", "ship_email", "mmsi", "official_no", "eta_dt", "port_registry", "nt", "voyage_no", "port_mv", "port_arr", "port_dep", "date_mv", "date_arr", "date_dep", "last_port", "ship_name", "imo", "portnet_no", "movement_arrival", "movement_departure", "flag", "call_sign",
                  "gt", "master_name", "ship_type"}
 _PX = {"date", "time", "facility", "expected", "ship", "berth", "agent", "estimated"}
 FIELD_EXCLUDE = {"port_mv": _PX, "port_arr": _PX, "port_dep": _PX, "last_port": {"facility", "date", "time", "delivery"},
                  "date_mv": {"time", "port"}, "date_arr": {"time", "port"}, "date_dep": {"time", "port"},
                  "voyage_no": {"particulars"},
-                 "ship_name": {"agent", "master", "owner", "manager", "company", "officer"},
+                 "ship_name": {"agent", "master", "owner", "manager", "company", "officer", "ballast", "system"},
                  "flag": {"agent"}}
 WASTE_HEADER_FIELDS = {"w_last_port", "w_last_date", "w_next_port_hdr"}
 # Concepts that the program knows about but where it is not clear how the form wants them: left empty + yellow.

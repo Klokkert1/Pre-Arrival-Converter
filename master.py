@@ -16,6 +16,15 @@ LABEL_TO_ID = {
     "CSO family name": "cso_family", "CSO phone 24/7": "cso_phone", "CSO e-mail": "cso_email",
     "Company name": "company_name", "Company IMO number": "company_imo", "Ship configuration": "ship_config",
     "Condition of cargo tanks": "cargo_condition", "Ballast tanks": "ballast",
+    "Total number of ballast tanks": "bw_tanks", "Number of tanks in ballast": "bw_in_ballast",
+    "Number of tanks exchanged": "bw_exchanged", "Number of tanks not exchanged": "bw_not_exchanged",
+    "Total ballast water on board (m3)": "bw_on_board", "Total ballast water capacity (m3)": "bw_capacity",
+    "Ballast water volume at arrival (m3)": "bw_vol_arrival", "Ballast water volume at departure (m3)": "bw_vol_departure",
+    "Ballast water management plan on board?": "bw_plan", "Ballast water treatment system on board?": "bw_treatment",
+    "Type of ballast water treatment": "bw_treatment_type", "Ballast water exchange in port?": "bw_exchange_port",
+    "Ballast water discharge in port?": "bw_discharge", "Volume of ballast water to be discharged (m3)": "bw_discharge_vol",
+    "Ballast water loaded in port?": "bw_loaded", "Volume of ballast water to be loaded (m3)": "bw_loaded_vol",
+    "IMO ballast water guidelines on board?": "bw_guidelines",
     # added from the company's own forms
     "Official number": "official_no", "Port of registry": "port_registry", "Inmarsat call numbers": "inmarsat",
     "UN/LOCODE of port of arrival/departure": "port_locode", "Date and time of arrival (ETA / ATA)": "eta_arrival",
@@ -75,7 +84,7 @@ class Master:
         self.wb = wb
         self.fields = {}
         self.health = {}
-        for sheet in ("Ship", "Voyage", "Security", "Health", "Nil_List"):
+        for sheet in ("Ship", "Voyage", "Security", "Health", "Nil_List", "Ballast"):
             if sheet not in wb.sheetnames:
                 continue
             ws = wb[sheet]
