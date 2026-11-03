@@ -472,18 +472,16 @@ def doc_rows(ws, t, records):
 
 
 def fill_table(ctx, ws, t, records, res):
-    if not records:
-        return 0
     n_people = len(records)
     ctx["pair_mode"] = False
-    if t.cols and "id_number" in t.cols.values() and ctx.get("crew_recs") is records:
+    if records and t.cols and "id_number" in t.cols.values() and ctx.get("crew_recs") is records:
         records, paired = doc_rows(ws, t, records)
         ctx["pair_mode"] = paired
         if paired:
             res.note("Passport and seaman's book are entered on two lines per person, as this form shows.")
     # skip tables that are driven by formulas
     probe = [ws.cell(t.data_start, c).value for c in t.cols]
-    if any(is_formula(v) for v in probe):
+    if probe and sum(1 for v in probe if is_formula(v)) * 2 >= len(probe):
         res.note("This sheet is filled by formulas from another sheet; left untouched.")
         return 0
     if len(records) > t.capacity:
@@ -538,7 +536,12 @@ def fill_table(ctx, ws, t, records, res):
             mark(cell)
             res.yellow += 1
     cleared = 0
-    for row in range(t.data_start + len(records), t.data_start + t.capacity):
+    _end = t.data_start + t.capacity
+    while _end < min(ws.max_row, t.data_start + 400) and any(
+            not isinstance(ws.cell(_end, c), MergedCell) and not blank(ws.cell(_end, c).value)
+            and not is_formula(ws.cell(_end, c).value) for c in t.cols if t.cols[c] != "serial"):
+        _end += 1                                   # leftover filled lines below the printed capacity
+    for row in range(t.data_start + len(records), _end):
         for c, concept in t.cols.items():
             if concept == "serial":
                 continue
@@ -1094,6 +1097,27 @@ def process_sheet(ctx, ws):
     return res
 
 
+def _static_language_labels(wb, path):
+    """Labels that are language-switch formulas (=IF(Settings!B6="bg","..","Store item name")) become their
+    displayed text, so the label recognition can read them."""
+    if not any("Settings!" in str(c.value) for ws in wb.worksheets[:3] for row in ws.iter_rows(min_row=1, max_row=4)
+               for c in row if isinstance(c.value, str) and c.value.startswith("=")):
+        return
+    wv = load_workbook(path, data_only=True)
+    for ws in wb.worksheets:
+        if ws.title not in wv.sheetnames:
+            continue
+        wsv = wv[ws.title]
+        for row in ws.iter_rows(min_row=1, max_row=min(ws.max_row, 60)):
+            for c in row:
+                f = c.value
+                if (isinstance(f, str) and f.startswith("=") and "Settings!" in f and "_N_" not in f
+                        and not isinstance(c, MergedCell)):
+                    v = wsv[c.coordinate].value
+                    if isinstance(v, str) and v.strip() and not v.startswith("DO NOT FILL"):
+                        c.value = v.strip()
+
+
 def process_workbook(master, path, out_dir):
     import os
     import slim as _slim
@@ -1106,6 +1130,10 @@ def process_workbook(master, path, out_dir):
                 os.remove(_wpath)
             except OSError:
                 pass
+    try:
+        _static_language_labels(wb, _wpath if os.path.exists(_wpath) else path)
+    except Exception:
+        pass
     ctx = {"master": master, "wb": wb, "rules": parse_instructions(wb), "path": path}
     results = []
     try:

@@ -3,9 +3,9 @@ import re
 from openpyxl.cell.cell import MergedCell
 from matching import norm, compact
 
-ART = r"^(\d+\.?\d*\.?\s*)?(name of article|number of article|article|articles|name of the article|artikel|artikelbezeichnung|nombre del articulo|description of (the )?stores)\b"
+ART = r"^(\d+\.?\d*\.?\s*)?(store item name|store item|name|name of article|number of article|article|articles|name of the article|artikel|artikelbezeichnung|nombre del articulo|description of (the )?stores)\b"
 QTY = ("quantity", "qty", "menge", "cantidad", "quantity kg ltr")
-UNIT = ("unit", "units", "einheit", "unidad")
+UNIT = ("unit", "units", "quantity unit", "einheit", "unidad")
 LOC = r"location on board|place of storage|location|lagerort|ubicacion|stowage"
 STOP = re.compile(r"signature|date and sig|^\s*\d+\.\s*date", re.I)
 
