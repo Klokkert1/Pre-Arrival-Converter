@@ -10,8 +10,13 @@ def read_master(wb):
         return []
     ws = wb["Narcotics"]
     hdr = {}
+    hr = 5
+    for r in range(1, 31):       # header row: wherever the ship header put it
+        if any(norm(str(ws.cell(r, c).value or "")).startswith("name of narcotic") for c in range(1, ws.max_column + 1)):
+            hr = r
+            break
     for c in range(1, ws.max_column + 1):
-        h = norm(str(ws.cell(5, c).value or ""))
+        h = norm(str(ws.cell(hr, c).value or ""))
         if not h:
             continue
         for key, rx in (("name", r"^name"), ("strength", r"strength|form"), ("qty", r"quantity|stock|on board"),
@@ -21,7 +26,7 @@ def read_master(wb):
             if re.search(rx, h) and key not in hdr:
                 hdr[key] = c
     rows = []
-    for r in range(6, ws.max_row + 1):
+    for r in range(hr + 1, ws.max_row + 1):
         rec = {k: ws.cell(r, c).value for k, c in hdr.items()}
         name = rec.get("name")
         if name in (None, "") or str(name).strip().lower() in ("extra",) or str(name).upper().startswith("EXAMPLE"):

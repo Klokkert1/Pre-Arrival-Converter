@@ -1,4 +1,5 @@
 """Reads the master Excel (the Master_FAL_Pre-arrival.xlsx template)."""
+import re
 import datetime
 from openpyxl import load_workbook
 from matching import match, norm
@@ -82,10 +83,25 @@ for _c, _l, _d in HEALTH_QUESTIONS:
 HEALTH_LABELS["Particulars of cases / deaths / sick persons (schedule)"] = "particulars"
 
 
+def _find_row(ws, pred, rows=range(1, 31)):
+    """First row (1-30) whose short texts satisfy pred - the column-header row, wherever it is."""
+    from matching import norm as _n
+    for r in rows:
+        t = [_n(str(ws.cell(r, c).value)) for c in range(1, min(ws.max_column, 30) + 1)
+             if isinstance(ws.cell(r, c).value, str) and len(ws.cell(r, c).value) <= 60 and "|" not in ws.cell(r, c).value]
+        if t and pred(t):
+            return r
+    return None
+
+
 class Master:
     def __init__(self, path):
         self.path = path
         wb = load_workbook(path, data_only=True)
+        for _ws in list(wb.worksheets):          # tab names like "Crew_List (FAL 5)" -> "Crew_List"
+            _base = re.sub(r"\s*\(.*\)\s*$", "", _ws.title)
+            if _base and _base != _ws.title and _base not in wb.sheetnames:
+                _ws.title = _base
         self.wb = wb
         self.fields = {}
         self.health = {}
@@ -121,23 +137,22 @@ class Master:
             cc = {}
             for c in range(1, ws.max_column + 1):
                 h = ws.cell(hr, c).value
-                if h:
+                if h and not (isinstance(h, str) and (len(h) > 60 or "|" in h)):
                     concept, _ = match(h, vocab)
                     if concept and concept not in cc.values():
                         cc[c] = concept
             return cc
         cols = _cols(header_row)
-        if key not in cols.values():
-            # rows were inserted or deleted above the table: look for the header row again
-            best = (0, None, None)
-            for hr in range(1, 16):
-                cc = _cols(hr)
-                if key in cc.values() and len(cc) > best[0]:
-                    best = (len(cc), hr, cc)
-            if best[1]:
-                header_row, cols = best[1], best[2]
-                first = header_row + 1
-                last = None if last is None else last + (header_row - 5)
+        best = (len(cols) if key in cols.values() else 0, header_row, cols)
+        for hr in range(1, 31):        # rows were inserted above the table (ship header) or deleted: look again
+            cc = _cols(hr)
+            if key in cc.values() and len(cc) > best[0]:
+                best = (len(cc), hr, cc)
+        if best[1] != header_row and best[1]:
+            shift = best[1] - header_row
+            header_row, cols = best[1], best[2]
+            first = header_row + 1
+            last = None if last is None else last + shift
         rows = []
         for r in range(first, (last or ws.max_row) + 1):
             rec = {cols[c]: ws.cell(r, c).value for c in cols}
@@ -153,9 +168,10 @@ class Master:
         if "Crew_List" not in self.wb.sheetnames:
             return
         ws = self.wb["Crew_List"]
+        hr = _find_row(ws, lambda t: any(x.startswith("passport") for x in t)) or 5
         cols = {}
         for c in range(1, ws.max_column + 1):
-            h = str(ws.cell(5, c).value or "").strip().lower()
+            h = str(ws.cell(hr, c).value or "").strip().lower()
             for pre, tag in (("passport", "pp"), ("seaman", "sb")):
                 if h.startswith(pre):
                     kind = "no" if h.endswith(" no.") else "state" if "state" in h else "exp" if "expiry" in h else None
@@ -164,7 +180,7 @@ class Master:
         if not cols:
             return
         recs = iter(self.crew)
-        for r in range(6, ws.max_row + 1):
+        for r in range(hr + 1, ws.max_row + 1):
             if ws.cell(r, 2).value in (None, ""):
                 continue
             rec = next(recs, None)
@@ -191,14 +207,16 @@ class Master:
         ce, cl = self.wb["Crew_Effects"], self.wb["Crew_List"]
         keys = {5: "eff_cig", 6: "eff_tob", 7: "eff_wine", 8: "eff_cash", 9: "eff_elec"}
         recs = iter(self.crew)
-        for r in range(6, cl.max_row + 1):
+        h_cl = _find_row(cl, lambda t: "family name" in t or "surname" in t) or 5
+        h_ce = _find_row(ce, lambda t: "cigarettes" in t) or 5
+        for r in range(h_cl + 1, cl.max_row + 1):
             if cl.cell(r, 2).value in (None, ""):
                 continue
             rec = next(recs, None)
             if rec is None:
                 break
             for c, k in keys.items():
-                v = ce.cell(r, c).value
+                v = ce.cell(r - h_cl + h_ce, c).value
                 if v not in (None, ""):
                     rec[k] = v
 
@@ -207,7 +225,8 @@ class Master:
             return []
         ws = self.wb["Ship_Stores"]
         out = []
-        for r in range(6, 66):
+        h = _find_row(ws, lambda t: "name of article" in t) or 5
+        for r in range(h + 1, h + 61):
             name = ws.cell(r, 2).value
             if name in (None, ""):
                 continue
