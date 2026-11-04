@@ -116,13 +116,28 @@ class Master:
         if sheet not in self.wb.sheetnames:
             return []
         ws = self.wb[sheet]
-        cols = {}
-        for c in range(1, ws.max_column + 1):
-            h = ws.cell(header_row, c).value
-            if h:
-                concept, _ = match(h, vocab)
-                if concept and concept not in cols.values():
-                    cols[c] = concept
+
+        def _cols(hr):
+            cc = {}
+            for c in range(1, ws.max_column + 1):
+                h = ws.cell(hr, c).value
+                if h:
+                    concept, _ = match(h, vocab)
+                    if concept and concept not in cc.values():
+                        cc[c] = concept
+            return cc
+        cols = _cols(header_row)
+        if key not in cols.values():
+            # rows were inserted or deleted above the table: look for the header row again
+            best = (0, None, None)
+            for hr in range(1, 16):
+                cc = _cols(hr)
+                if key in cc.values() and len(cc) > best[0]:
+                    best = (len(cc), hr, cc)
+            if best[1]:
+                header_row, cols = best[1], best[2]
+                first = header_row + 1
+                last = None if last is None else last + (header_row - 5)
         rows = []
         for r in range(first, (last or ws.max_row) + 1):
             rec = {cols[c]: ws.cell(r, c).value for c in cols}
