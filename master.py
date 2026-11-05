@@ -109,7 +109,12 @@ class Master:
             if sheet not in wb.sheetnames:
                 continue
             ws = wb[sheet]
-            for r in range(4, ws.max_row + 1):
+            start = 4
+            for r in range(1, 25):       # the ship header sits above the 'FAL ref | Field | FILL IN' row: skip it
+                if str(ws.cell(r, 1).value or "").strip() == "FAL ref":
+                    start = r + 1
+                    break
+            for r in range(start, ws.max_row + 1):
                 label, val = ws.cell(r, 2).value, ws.cell(r, 3).value
                 if label in LABEL_TO_ID and val not in (None, ""):
                     self.fields[LABEL_TO_ID[label]] = val
